@@ -54,8 +54,32 @@ interface BDVideoProps {
 	onLoad:()=>void
 }
 
-function BDVideo({display, onMouseOver, onMouseOut, objectFit, size, onLoad}:BDVideoProps) {
-	function setVideo(video:HTMLVideoElement) {
+interface BDVideoState {
+	initialLoad:boolean
+}
+
+class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
+	constructor(props:BDVideoProps) {
+		super(props)
+		this.state = {
+			initialLoad: true
+		}
+	}
+
+	render() {
+		const {size, onMouseOver, onMouseOut, display, objectFit} = this.props
+
+		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
+			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}></div>
+			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url}
+			{...size} ref={i => i && this.setVideo(i)} style={{objectFit}} />
+		</div>
+	}
+
+	setVideo(video:HTMLVideoElement) {
+		const {initialLoad} = this.state
+		if (!initialLoad) return
+		const {display, onLoad} = this.props
 		display.video = video
 		if (display.startTime) {
 			video.currentTime = display.startTime
@@ -63,13 +87,8 @@ function BDVideo({display, onMouseOver, onMouseOut, objectFit, size, onLoad}:BDV
 			video.onloadeddata = e => video.currentTime = video.seekable.end(0) / 2
 			video.onloadedmetadata = e => onLoad()
 		}
+		this.setState({initialLoad: false})
 	}
-	
-	return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
-		<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}></div>
-		<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url}
-		{...size} ref={i => i && setVideo(i)} style={{objectFit}} />
-	</div>
 }
 
 interface Dimensions {
