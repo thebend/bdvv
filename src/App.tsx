@@ -107,11 +107,11 @@ function toggleFullscreen() {
 class App extends React.Component<{},AppState> {
 	viewport:React.RefObject<HTMLElement>
 	globalActions = {
+		"f": () => toggleFullscreen(),
+		"h": () => this.setState({showHelp: !this.state.showHelp}),
 		"i": () => this.setState({showInfo: !this.state.showInfo}),
-		"x": () => this.nextDimensionRatio(),
-		"f": () => this.nextObjectFit(),
-		"F": () => toggleFullscreen(),
-		"h": () => this.setState({showHelp: !this.state.showHelp})
+		"s": () => this.nextObjectFit(),
+		"x": () => this.nextDimensionRatio()
 	} as ActionControls
 
 	constructor(props:{}) {
@@ -183,7 +183,9 @@ class App extends React.Component<{},AppState> {
 			this.setState({
 				displays: this.state.displays.concat(newDisplays),
 				maxId,
-				firstBatch: false
+				firstBatch: false,
+				// hide help if we are adding videos
+				showHelp: this.state.showHelp && videoFiles.length == 0
 			})
 		}
 	}
@@ -301,17 +303,16 @@ class App extends React.Component<{},AppState> {
 				<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
 				<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
 				<h2>Shortcuts</h2><ol>
+					<li><em>C:</em> Clone video (+1m)</li>
 					<li><em>D:</em> Delete video</li>
-					<li><em>C:</em> Clone video</li>
-					<li><em>I:</em> Toggle info overlay</li>
-					<li><em>X:</em> Change aspect ratio</li>
-					<li><em>f:</em> Change video scaling</li>
-					<li><em>F:</em> Toggle Fullscreen</li>
 					<li><em>H:</em> Toggle help</li>
+					<li><em>I:</em> Toggle info overlay</li>
 					<li><em>M:</em> Toggle mute</li>
+					<li><em>S:</em> Change video scaling</li>
+					<li><em>X:</em> Change aspect ratio</li>
 					<li><em>← →:</em> Skip 1m</li>
-					<li><em>F11:</em> Toggle fullscreen</li>
 					<li><em>Ctrl+W:</em> Close tab</li>
+					<li><em>F / F11:</em> Toggle fullscreen</li>
 				</ol>
 			</section>}
 		</>

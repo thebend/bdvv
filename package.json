@@ -30,5 +30,5 @@
 		"@types/react-dom": "^16.8.4",
 		"gh-pages": "^2.0.1"
 	},
-	"homepage": "https://thebend.github.io/bdv-dist"
+	"homepage": "https://thebend.github.io/bdv"
 }
