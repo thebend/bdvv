@@ -1,5 +1,5 @@
 {
-	"name": "viewer",
+	"name": "BDVV",
 	"version": "0.1.0",
 	"private": true,
 	"dependencies": {
@@ -30,5 +30,5 @@
 		"@types/react-dom": "^16.8.4",
 		"gh-pages": "^2.0.1"
 	},
-	"homepage": "https://thebend.github.io/bdv"
+	"homepage": "https://bdvv.tv"
 }

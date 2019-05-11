@@ -45,6 +45,11 @@ em {
 #help li {
 	margin: .3em auto;
 }
+#help footer {
+	font-size: smaller;
+	color: #eee;
+
+}
 
 #info-toggle {
 	color: white;
@@ -52,8 +57,10 @@ em {
 	position: absolute;
 	text-align: center;
 	top: 50%;
-	transform: translateY(-50%);
-	width: 100%;
+	right: 50%;
+	transform: translateY(-50%) translateX(50%);
+	width: auto;
+	z-index: 1;
 }
 
 div.display {
@@ -65,4 +72,26 @@ div.display-border {
 div.display:hover .display-border {
 	border: 1px solid white;
 	box-sizing: border-box;
+}
+
+#errors {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	z-index: 1;
+	background-color: #a88;
+	padding: 1rem;
+	box-sizing: border-box;
+}
+#errors h2 {
+	margin-top: 0;
+}
+#errors code {
+	font-size: larger;
+	font-weight: bold;
+}
+#errors button {
+	position: absolute;
+	top: 1rem;
+	right: 1rem;
 }

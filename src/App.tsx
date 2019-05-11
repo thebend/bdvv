@@ -11,6 +11,28 @@ import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
 type ObjectFit = "fill"|"contain"|"cover"|"scale-down"
 const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFit[]
 
+const HELP = <section id="help">
+	<h2>Usage</h2>
+	<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
+	<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
+	<h2>Shortcuts</h2><ol>
+		<li><em>C:</em> Clone video (+1m)</li>
+		<li><em>D:</em> Delete video</li>
+		<li><em>H:</em> Toggle help</li>
+		<li><em>I:</em> Toggle info overlay</li>
+		<li><em>M:</em> Toggle mute</li>
+		<li><em>S:</em> Change video scaling</li>
+		<li><em>X:</em> Change aspect ratio</li>
+		<li><em>← →:</em> Skip 1m</li>
+		<li><em>Ctrl+W:</em> Close tab</li>
+		<li><em>F / F11:</em> Toggle fullscreen</li>
+	</ol>
+	<footer>
+		<h2>Privacy Disclaimer</h2>
+		<p>This tool records <b>no</b> filenames, screen grabs, or any other methods of identifying the actual contents of any video.  Only metadata about a video's format (codec, file size, resolution, and duration) may be recorded.</p>
+	</footer>
+</section>
+
 function stopDragDrop(e:Event) {
 	e.preventDefault()
 	e.stopPropagation()
@@ -52,17 +74,22 @@ interface BDVideoProps {
 	onMouseOver:()=>void,
 	onMouseOut:()=>void,
 	onLoad:()=>void
+	onError:()=>void
 }
 
-interface BDVideoState {
-	initialLoad:boolean
-}
+class BDVideo extends React.Component<BDVideoProps> {
+	video = React.createRef<HTMLVideoElement>()
 
-class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
-	constructor(props:BDVideoProps) {
-		super(props)
-		this.state = {
-			initialLoad: true
+	componentDidMount() {
+		const {display, onLoad, onError} = this.props
+		const video = this.video.current!
+		display.video = video
+		if (display.startTime) {
+			video.currentTime = display.startTime
+		} else {
+			video.onerror = onError
+			video.onloadeddata = e => video.currentTime = video.seekable.end(0) / 2
+			video.onloadedmetadata = onLoad
 		}
 	}
 
@@ -72,22 +99,8 @@ class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
 			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}></div>
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url}
-			{...size} ref={i => i && this.setVideo(i)} style={{objectFit}} />
+			{...size} ref={this.video} style={{objectFit}} />
 		</div>
-	}
-
-	setVideo(video:HTMLVideoElement) {
-		const {initialLoad} = this.state
-		if (!initialLoad) return
-		const {display, onLoad} = this.props
-		display.video = video
-		if (display.startTime) {
-			video.currentTime = display.startTime
-		} else {
-			video.onloadeddata = e => video.currentTime = video.seekable.end(0) / 2
-			video.onloadedmetadata = e => onLoad()
-		}
-		this.setState({initialLoad: false})
 	}
 }
 
@@ -102,12 +115,14 @@ interface AppState {
 	displays:Display[],
 	maxId:number,
 	activeDisplay?:Display,
+	lastDisplay?:Display,
 	viewport?:Dimensions,
 	ratioIndex:number,
 	aspectRatio:AspectRatio,
 	objectFitIndex:number,
 	objectFit:ObjectFit,
-	firstBatch:boolean
+	firstBatch:boolean,
+	errorDisplays:Display[]
 }
 
 interface ActionControls {
@@ -145,7 +160,8 @@ class App extends React.Component<{},AppState> {
 			aspectRatio: ASPECT_RATIOS[0],
 			objectFitIndex: 0,
 			objectFit: OBJECT_FITS[0],
-			firstBatch: true
+			firstBatch: true,
+			errorDisplays: []
 		}
 
 		window.onresize = () => this.updateDimensions()
@@ -302,38 +318,39 @@ class App extends React.Component<{},AppState> {
 		})
 	}
 
+	handleVideoError(display:Display) {
+		const {displays, errorDisplays} = this.state
+		errorDisplays.push(display)
+		this.setState({
+			displays: displays.filter(i => i != display),
+			errorDisplays
+		})
+	}
+
 	render() {
-		const {displays, activeDisplay, showInfo, showHelp, aspectRatio, objectFit} = this.state
+		const {displays, errorDisplays, activeDisplay, lastDisplay, showInfo, showHelp, aspectRatio, objectFit} = this.state
 		const size = this.getVideoSize()
 		return <>
-			{showInfo && activeDisplay && <div id="info-toggle">
+			{showInfo && lastDisplay && <div id="info-toggle">
 				{aspectRatio.name}<br />
 				Scale strategy: {objectFit}<br />
-				{activeDisplay.file.name}
+				{lastDisplay.file.name}
 			</div>}
 			<main ref={this.viewport}>
 				{displays.map(i => <BDVideo size={size} objectFit={objectFit} key={i.id} display={i}
-					onMouseOver={() => this.setState({activeDisplay: i})}
+					onMouseOver={() => this.setState({activeDisplay: i, lastDisplay: i})}
 					onMouseOut={() => this.setState({activeDisplay: undefined})}
-					onLoad={() => i.triggerResize && this.setRecommendedAspectRatio()} />)}
+					onLoad={() => i.triggerResize && this.setRecommendedAspectRatio()}
+					onError={() => this.handleVideoError(i)} />)}
 			</main>
-			{showHelp && <section id="help">
-				<h2>Usage</h2>
-				<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
-				<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
-				<h2>Shortcuts</h2><ol>
-					<li><em>C:</em> Clone video (+1m)</li>
-					<li><em>D:</em> Delete video</li>
-					<li><em>H:</em> Toggle help</li>
-					<li><em>I:</em> Toggle info overlay</li>
-					<li><em>M:</em> Toggle mute</li>
-					<li><em>S:</em> Change video scaling</li>
-					<li><em>X:</em> Change aspect ratio</li>
-					<li><em>← →:</em> Skip 1m</li>
-					<li><em>Ctrl+W:</em> Close tab</li>
-					<li><em>F / F11:</em> Toggle fullscreen</li>
+			{errorDisplays.length > 0 && <section id="errors">
+				<h2>Errors</h2><ol>
+					{errorDisplays.map((display, i) => <li key={i}>{display.file.name} ({display.file.type})</li>)}
 				</ol>
+				<p>Only videos supported by your web browser will play successfully.  <code>.mp4</code> and <code>.webm</code> files are good bets.</p>
+				<form onSubmit={() => this.setState({errorDisplays: []})}><button>Dismiss</button></form>
 			</section>}
+			{showHelp && HELP}
 		</>
 	}
 }
