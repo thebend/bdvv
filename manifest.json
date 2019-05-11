@@ -1,6 +1,7 @@
 {
-	"short_name": "BDV",
-	"name": "BD Viewer",
+	"short_name": "BDVV",
+	"name": "BD Video Viewer",
+	"description": "Multi-video drag-and-drop viewer for desktops",
 	"icons": [
 		{
 			"src": "favicon.ico",
