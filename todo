@@ -1,8 +1,25 @@
 x error handling for unknown codecs
 x Privacy policy
 x Hovering over info causes loss of info
-o custom domain
-- collect metadata
-- Google analytics
-o advertising (hide from new users)
+x custom domain
+x Google analytics
+x to toggle showing video titles on each title
+x Recolor warning screen
+x Shift+Arrow to skip 10% instead of 1m
+x Fast-Forward feature
 - Drag and drop re-order feature
+- Loop over subset of video with timeline I/O
+
+Business
+- collect metadata
+- advertising (hide from new users)
+
+Features
+o splash page:
+ o Move "about" off of help into center
+ - scour video game screen capture or TV episode to find highlights
+ - scour suveillance video footage
+- scrubbing feature with timeline thumbnails
+- Add I/O visualizer
+- Allow drag-scrubbing video without activating drag/drop feature
+- Add a logo

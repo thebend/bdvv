@@ -13,6 +13,14 @@ em {
 	font-style: normal;
 }
 
+#splash {
+	font-size: 2em;
+	padding: 2em;
+	box-sizing: border-box;
+	margin-right: 20rem;
+	color: #ddd;
+}
+
 #help {
 	position: absolute;
 	top: 0;
@@ -71,6 +79,14 @@ div.display-border {
 }
 div.display:hover .display-border {
 	border: 1px solid white;
+}
+.display-border {
+	color: #eee;
+	font-size: larger;
+	text-align: center;
+	vertical-align: top;
+	font-family: Consolas, monospace;
+	font-weight: bold;
 	box-sizing: border-box;
 }
 
@@ -79,9 +95,14 @@ div.display:hover .display-border {
 	bottom: 0;
 	width: 100%;
 	z-index: 1;
-	background-color: #a88;
+	/* background-color: #a88; */
+	background-color: rgb(190, 128, 128);
+	color: rgb(59, 0, 0);
 	padding: 1rem;
 	box-sizing: border-box;
+}
+#errors li {
+	font-family: Consolas, monospace;
 }
 #errors h2 {
 	margin-top: 0;
