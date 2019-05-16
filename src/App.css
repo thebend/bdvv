@@ -71,13 +71,14 @@ em {
 	z-index: 1;
 }
 
-div.display {
+.display {
 	display: inline-block;
+	position: relative;
 }
-div.display-border {
+.display-border {
 	position: absolute;
 }
-div.display:hover .display-border {
+.display:hover .display-border {
 	border: 1px solid white;
 }
 .display-border {
@@ -115,4 +116,9 @@ div.display:hover .display-border {
 	position: absolute;
 	top: 1rem;
 	right: 1rem;
+}
+
+svg.iomarker {
+	z-index: 1;
+	position: absolute;
 }

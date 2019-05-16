@@ -7,8 +7,14 @@ x to toggle showing video titles on each title
 x Recolor warning screen
 x Shift+Arrow to skip 10% instead of 1m
 x Fast-Forward feature
-- Drag and drop re-order feature
-- Loop over subset of video with timeline I/O
+x Drag and drop re-order feature
+x Allow drag-scrubbing video without activating drag/drop feature
+x Loop over subset of video with timeline I/O
+x Add I/O visualizer
+x Fix issue with playback speed reverting to default
+x Apply speed to all feature
+x Distribute times evenly for matching videos
+x Fix issue with ratio algorithm - two widescreen videos in a square frame should be top/bottom, not left/right!
 
 Business
 - collect metadata
@@ -19,7 +25,5 @@ o splash page:
  o Move "about" off of help into center
  - scour video game screen capture or TV episode to find highlights
  - scour suveillance video footage
-- scrubbing feature with timeline thumbnails
-- Add I/O visualizer
-- Allow drag-scrubbing video without activating drag/drop feature
 - Add a logo
+- scrubbing feature with timeline thumbnails

@@ -1,14 +1,11 @@
 import React from 'react'
 import './App.css'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
-import { setPriority } from 'os';
 
-// remember help display setting?  Or hide on add video?  hide on add only if already hidden?
-// add logo
-// add whole thing as repository and configure gh-pages deploy
-// make commands responsive when no video present
-// refence react as third party library on cdn?
+// TODO: add logo
+// TODO: refence react as third party library on cdn?
 
+// TODO: fix this TypeScript hack
 type ObjectFit = "fill"|"contain"|"cover"|"scale-down"
 const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFit[]
 
@@ -22,15 +19,17 @@ const HELP = <section id="help">
 	<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
 	<h2>Shortcuts</h2><ol>
 		<li><em>C:</em> Clone video (+1m)</li>
-		<li><em>D:</em> Delete video</li>
+		<li><em>D:</em> Distribute times</li>
 		<li><em>H:</em> Toggle help</li>
 		{/* <li><em>I:</em> Toggle info overlay</li> */}
 		<li><em>M:</em> Toggle mute</li>
+		<li><em>R:</em> Delete video</li>
 		<li><em>S:</em> Change video scaling</li>
 		<li><em>X:</em> Change aspect ratio</li>
 		<li><em>← →:</em> Skip 1m</li>
 		<li><em>Shift ← →:</em> Skip 10%</li>
 		<li><em>Ctrl ← →:</em> Change speed</li>
+		<li><em>Shift+S</em> Sync speeds</li>
 		<li><em>Ctrl+W:</em> Close tab</li>
 		<li><em>F / F11:</em> Toggle fullscreen</li>
 		<li><em>I / O:</em> Toggle in / out time</li>
@@ -52,10 +51,23 @@ function toggleMute(video?:HTMLVideoElement) {
 	video.muted = !video.muted
 }
 
+interface IOMarkerProps {
+	offset:number,
+	xPadding:number,
+	color:string
+}
+function IOMarker({offset, xPadding, color}:IOMarkerProps) {
+	const diameter = 10
+	const yPadding = 16
+	return <svg className="iomarker" width={diameter} height={diameter} style={{bottom: yPadding + (diameter/2), left: xPadding + offset - (diameter/2)}} viewBox={`0 0 2 2`}>
+		<circle cx={1} cy={1} r={1} fill={color} />
+	</svg>
+}
+
 function adjustDisplayTime(display:Display, adjustment:number, percentage:boolean = false) {
 	const vid = display.video
 	if (!vid) return
-	const end = vid.seekable.end(0)
+	const end = vid.duration
 	if (percentage) {
 		adjustment = end * adjustment
 	}
@@ -65,12 +77,6 @@ function adjustDisplayTime(display:Display, adjustment:number, percentage:boolea
 	} else {
 		vid.currentTime = vid.currentTime + adjustment
 	}
-}
-
-function adjustVideoSpeed(display:Display, adjustment:number) {
-	const vid = display.video
-	if (!vid) return
-	vid.playbackRate = vid.playbackRate * adjustment
 }
 
 interface Display {
@@ -92,10 +98,10 @@ interface BDVideoProps {
 		width:number,
 		height:number
 	},
-	showTitle:boolean,
+	showOverlay:boolean,
 	inTime?:number,
 	outTime?:number,
-	playbackRate?:number,
+	playbackRate:number,
 	onMouseOver:()=>void,
 	onMouseOut:()=>void,
 	onLoad:()=>void
@@ -132,18 +138,46 @@ class BDVideo extends React.Component<BDVideoProps> {
 			video.currentTime = display.startTime
 		} else {
 			video.onerror = onError
-			video.onloadeddata = e => video.currentTime = video.seekable.end(0) / 2
+			video.onloadeddata = e => video.currentTime = video.duration / 2
 			video.onloadedmetadata = onLoad
 		}
-		video.ondragstart = e => onDrag(display)
+		video.ondragstart = e => {
+			const target = e.target! as HTMLVideoElement
+			const distanceFromBottom = target.height - e.offsetY
+			if (distanceFromBottom < 80) {
+				e.preventDefault()
+				return
+			}
+			onDrag(display)
+		}
 		this.setIO()
 	}
 
+	getIO() {
+		const {inTime, outTime} = this.props
+		const video = this.video.current!
+
+		if (inTime || outTime) {
+			const xPadding = video.width * .02
+			const duration = video.duration
+			const ip = inTime || 0
+			const op = outTime || duration
+			const timelineWidth = video.width - (xPadding*2)
+			const ix = (ip / duration) * timelineWidth
+			const ox = (op / duration) * timelineWidth
+			return <>
+				<IOMarker xPadding={xPadding} offset={ix} color="green" />
+				<IOMarker xPadding={xPadding} offset={ox} color="red" />
+			</>
+		}
+	}
+
 	render() {
-		const {size, onMouseOver, onMouseOut, display, objectFit, showTitle} = this.props
+		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay} = this.props
 
 		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
-			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}>{showTitle && display.file.name}</div>
+			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}>{showOverlay && display.file.name}</div>
+			{showOverlay && this.getIO()}
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={true}
 				{...size} ref={this.video} style={{objectFit}} title={display.file.name} />
 		</div>
@@ -195,6 +229,30 @@ class App extends React.Component<{},AppState> {
 		"x": () => this.nextDimensionRatio()
 	} as ActionControls
 
+	syncPlaybackRates(playbackRate:number) {
+		// const displays = [...this.state.displays]
+		const {displays} = this.state
+		displays.forEach(i => i.playbackRate = playbackRate)
+		this.setState({displays}) 
+	}
+
+	distributeTimes(display:Display) {
+		const {displays} = this.state
+		const matchingDisplays = displays.filter(i => i.file == display.file)
+		const di = matchingDisplays.indexOf(display)
+		// start with target display so it keeps its current time, bump up from there looping back to start
+		const orderedDisplays = [display, ...matchingDisplays.slice(di+1), ...matchingDisplays.slice(0, di)]
+
+		const t1 = display.video!.currentTime
+		const duration = display.video!.duration
+		const spacing = duration / orderedDisplays.length
+		orderedDisplays.forEach((v, i) => {
+			const targetTime = t1 + (spacing * i)
+			// loop time back to beginning once we exceed end of video
+			v.video!.currentTime = targetTime < duration ? targetTime : targetTime - duration
+		})
+	}
+
 	constructor(props:{}) {
 		super(props)
 		this.viewport = React.createRef<HTMLElement>()
@@ -214,48 +272,41 @@ class App extends React.Component<{},AppState> {
 		window.onresize = () => this.updateDimensions()
 
 		window.onkeydown = ev => {
-			const key = ev.key
-			const altCase = key.toLowerCase() == key ? key.toUpperCase() : key.toLowerCase()
-			
-			function executeAction(actions:ActionControls, key:string, altKey?:string) {
-				if (key in actions) {
-					actions[key]()
-					return true
-				} else if (altKey && altKey in actions) {
-					actions[altKey]()
-					return true
-				}
-				return false
+			const key = ev.key.toLowerCase()
+			if (key in this.globalActions) {
+				this.globalActions[key]()
+				return
 			}
-			if (executeAction(this.globalActions, key, altCase)) return
 
 			const {activeDisplay} = this.state
 			if (!activeDisplay) return
 
 			if (ev.shiftKey) {
 				const shiftDisplayActions = {
-					"ArrowLeft": () => adjustDisplayTime(activeDisplay, -.1, true),
-					"ArrowRight": () => adjustDisplayTime(activeDisplay, .1, true),
+					"arrowleft": () => adjustDisplayTime(activeDisplay, -.1, true),
+					"arrowright": () => adjustDisplayTime(activeDisplay, .1, true),
+					"s": () => this.syncPlaybackRates(activeDisplay.playbackRate)
 				} as ActionControls
-				executeAction(shiftDisplayActions, key, altCase)
+				key in shiftDisplayActions && shiftDisplayActions[key]()
 			} else if (ev.ctrlKey) {
 				const ctrlDisplayActions = {
-					"ArrowLeft": () => adjustVideoSpeed(activeDisplay, 0.5),
-					"ArrowRight": () => adjustVideoSpeed(activeDisplay, 2)
-				}
-				executeAction(ctrlDisplayActions, key, altCase)
+					"arrowleft": () => this.adjustVideoSpeed(activeDisplay, 0.5),
+					"arrowright": () => this.adjustVideoSpeed(activeDisplay, 2)
+				} as ActionControls
+				key in ctrlDisplayActions && ctrlDisplayActions[key]()
 			} else {
 				const displayActions = {
-					"Delete": () => this.deleteDisplay(activeDisplay),
-					"d": () => this.deleteDisplay(activeDisplay),
+					"delete": () => this.deleteDisplay(activeDisplay),
 					"c": () => this.copyDisplay(activeDisplay),
+					"d": () => this.distributeTimes(activeDisplay),
 					"i": () => this.setVideoIO(activeDisplay, "in"),
 					"o": () => this.setVideoIO(activeDisplay, "out"),
-					"ArrowLeft": () => adjustDisplayTime(activeDisplay, -60),
-					"ArrowRight": () => adjustDisplayTime(activeDisplay, 60),
-					"m": () => toggleMute(activeDisplay.video)
+					"m": () => toggleMute(activeDisplay.video),
+					"r": () => this.deleteDisplay(activeDisplay),
+					"arrowleft": () => adjustDisplayTime(activeDisplay, -60),
+					"arrowright": () => adjustDisplayTime(activeDisplay, 60),
 				} as ActionControls
-				executeAction(displayActions, key, altCase)
+				key in displayActions && displayActions[key]()
 			}
 		}
 
@@ -274,7 +325,8 @@ class App extends React.Component<{},AppState> {
 				id: ++maxId,
 				file,
 				url: URL.createObjectURL(file),
-				triggerResize: firstBatch
+				triggerResize: firstBatch,
+				playbackRate: 1
 			} as Display})
 
 			this.setState({
@@ -289,23 +341,32 @@ class App extends React.Component<{},AppState> {
 
 	getVideoSize() {
 		const {displays, aspectRatio, viewport} = this.state
+		// assume minimum size if no viewport (shouldn't happen)
 		if (!viewport) return {width: 1, height: 1}
+		// if only one display, use full size
 		if (displays.length < 2) return {width: viewport.x, height: viewport.y}
 
-		let smallest = 0, bestrows = 0, bestcols = 0
-		for (let rows = 1; rows < displays.length; rows++) {
-			let cols = Math.ceil(displays.length / rows)
-			let x = viewport.x / cols
-			let y = viewport.y * aspectRatio.ratio / rows
-
-			// if neither are smaller, replace
-			if (smallest <= x && smallest <= y) {
-				smallest = Math.min(x, y)
-				bestrows = rows
-				bestcols = cols
+		// try every number of rows up to a dedicated row for each video
+		let bestArea = 0, bestrows = 0, bestcols = 0
+		const videoRatio = aspectRatio.ratio
+		for (let rows = 1; rows <= displays.length; rows++) {
+			// get the necessary number of columns with a given number of rows
+			const cols = Math.ceil(displays.length / rows)
+			// this determines the size of the resulting box
+			const x = viewport.x / cols, y = viewport.y / rows
+			// actual video dimensions will depend on ratio within the display box, being shrunk on one side
+			let vx = x, vy = y
+			if (videoRatio > x/y) {
+				vy = vx / videoRatio
 			} else {
-				break
+				vx = vy * videoRatio
 			}
+			const videoArea = vx * vy
+			// if this isn't an improvement, continue looking
+			if (videoArea < bestArea) continue
+			// otherwise save this as best situation
+			bestArea = videoArea
+			bestrows = rows, bestcols = cols
 		}
 
 		return {
@@ -326,7 +387,6 @@ class App extends React.Component<{},AppState> {
 			display[mode] = display.video!.currentTime
 		}
 		// not sure if this way of updating the display will work
-		console.log(display)
 		this.setState({displays: this.state.displays})
 	}
 
@@ -337,10 +397,10 @@ class App extends React.Component<{},AppState> {
 	}
 
 	copyDisplay(display:Display) {
-		const activeVideo = display.video
+		const activeVideo = display.video!
 		const maxId = this.state.maxId + 1
-		let startTime = activeVideo!.currentTime + 60
-		if (startTime > activeVideo!.seekable.end(0)) startTime = 0
+		let startTime = activeVideo.currentTime + 60
+		if (startTime > activeVideo.duration) startTime = 0
 		const newDisplay = {
 			id: maxId,
 			file: display.file,
@@ -349,7 +409,10 @@ class App extends React.Component<{},AppState> {
 			startTime,
 			triggerResize: false
 		}
-		this.setState({ maxId, displays: this.state.displays.concat(newDisplay)})
+		this.setState({
+			maxId,
+			displays: this.state.displays.concat(newDisplay)
+		})
 	}
 
 	deleteDisplay(display:Display) {
@@ -406,7 +469,6 @@ class App extends React.Component<{},AppState> {
 		})
 	}
 
-	// how do I determine the display?  Right now I have an HTML element target that's inside the React element, hidden from this level.
 	reorderDisplays(dest:EventTarget) {
 		const {displays, dragSrc} = this.state
 		if (!dragSrc) return
@@ -419,7 +481,6 @@ class App extends React.Component<{},AppState> {
 	}
 
 	render() {
-		console.log('render')
 		const {displays, errorDisplays, activeDisplay, lastDisplay, showInfo, showHelp, aspectRatio, objectFit} = this.state
 		const size = this.getVideoSize()
 		return <>
@@ -432,15 +493,14 @@ class App extends React.Component<{},AppState> {
 				onDrop={e => this.reorderDisplays(e.target)}>
 				{displays.length == 0 && SPLASH}
 				{displays.map(i => <BDVideo size={size} objectFit={objectFit} key={i.id} display={i}
-					showTitle={i == activeDisplay}
+					showOverlay={i == activeDisplay}
 					playbackRate={i.playbackRate}
 					onDrag={display => this.setState({dragSrc: display})}
 					onMouseOver={() => this.setState({activeDisplay: i, lastDisplay: i})}
 					onMouseOut={() => this.setState({activeDisplay: undefined})}
 					onLoad={() => i.triggerResize && this.setRecommendedAspectRatio()}
 					onError={() => this.handleVideoError(i)}
-					inTime={i.in}
-					outTime={i.out}
+					inTime={i.in} outTime={i.out}
 				/>)}
 			</main>
 			{errorDisplays.length > 0 && <section id="errors">
