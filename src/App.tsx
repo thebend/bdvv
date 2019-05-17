@@ -32,6 +32,7 @@ const HELP = <section id="help">
 		<li><em>Shift+S</em> Sync speeds</li>
 		<li><em>Ctrl+W:</em> Close tab</li>
 		<li><em>F / F11:</em> Toggle fullscreen</li>
+		<li><em>Shift+F:</em> Fullscreen video</li>
 		<li><em>I / O:</em> Toggle in / out time</li>
 		<li><em>OO:</em> Restart video</li>
 		<li><em>2-9:</em> Fill 2-9 size grid</li>
@@ -254,12 +255,13 @@ interface ActionControls {
 	[key:string]: ()=>void
 }
 
-function toggleFullscreen() {
+function toggleFullscreen(target?:HTMLVideoElement) {
 	if (!document.fullscreenEnabled) return
 	if (document.fullscreenElement) {
 		document.exitFullscreen()
 	} else {
-		document.body.requestFullscreen()
+		// document.body.requestFullscreen()
+		(target || document.body).requestFullscreen()
 	}
 }
 
@@ -343,7 +345,8 @@ class App extends React.Component<{},AppState> {
 				const shiftDisplayActions = {
 					"arrowleft": () => adjustDisplayTime(activeDisplay, -.1, true),
 					"arrowright": () => adjustDisplayTime(activeDisplay, .1, true),
-					"s": () => this.syncPlaybackRates(activeDisplay.playbackRate)
+					"s": () => this.syncPlaybackRates(activeDisplay.playbackRate),
+					"f": () => activeDisplay.video!.requestFullscreen()
 				} as ActionControls
 				key in shiftDisplayActions && shiftDisplayActions[key]()
 			} else if (ev.ctrlKey) {

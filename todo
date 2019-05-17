@@ -22,6 +22,7 @@ x Add a favicon / logo
 x Make installable
 x Hide thumb on exit
 x Indicate playback speed in overlay
+x Fill screen shortcut with single video
 
 Business
 - collect metadata
@@ -36,4 +37,3 @@ o splash page:
  - No drag/drop in IE11
  - No fullscreen in Edge
 - Refactor with redux?
-- Fillscreen single video
