@@ -18,6 +18,10 @@ x Fix issue with ratio algorithm - two widescreen videos in a square frame shoul
 x Quick shortcuts for start in help "oo"
 x Quick distributed copies
 x scrubbing feature with timeline thumbnails
+x Add a favicon / logo
+x Make installable
+x Hide thumb on exit
+x Indicate playback speed in overlay
 
 Business
 - collect metadata
@@ -28,4 +32,8 @@ o splash page:
  o Move "about" off of help into center
  - scour video game screen capture or TV episode to find highlights
  - scour suveillance video footage
-- Add a favicon / logo
+- Test in other browsers
+ - No drag/drop in IE11
+ - No fullscreen in Edge
+- Refactor with redux?
+- Fillscreen single video

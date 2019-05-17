@@ -189,6 +189,9 @@ class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 				})
 			}
 		}
+		video.onmouseout = e => {
+			this.setState({thumbnail: undefined})
+		}
 		this.setIO()
 	}
 
@@ -212,11 +215,11 @@ class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 	}
 
 	render() {
-		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay} = this.props
+		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, playbackRate} = this.props
 		const {thumbnail} = this.state
 
 		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
-			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}>{showOverlay && display.file.name}</div>
+			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}>{showOverlay && `${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}</div>
 			{showOverlay && this.getIO()}
 			{thumbnail && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnail.offsetX}} />}
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={true}
