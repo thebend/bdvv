@@ -33,7 +33,9 @@ const HELP = <section id="help">
 		<li><em>Ctrl+W:</em> Close tab</li>
 		<li><em>F / F11:</em> Toggle fullscreen</li>
 		<li><em>I / O:</em> Toggle in / out time</li>
-		<li>Drag&amp;Drop: Reorder videos</li>
+		<li><em>OO:</em> Restart video</li>
+		<li><em>2-9:</em> Fill 2-9 size grid</li>
+		<li><em>Drag&amp;Drop:</em> Reorder videos</li>
 	</ol>
 	<footer>
 		<h2>Privacy Disclaimer</h2>
@@ -109,8 +111,24 @@ interface BDVideoProps {
 	onDrag:(display:Display)=>void
 }
 
-class BDVideo extends React.Component<BDVideoProps> {
+interface BDVideoState {
+	thumbnail?:{
+		offsetX:number,
+		timestamp:number
+	}
+}
+
+class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 	video = React.createRef<HTMLVideoElement>()
+	thumbnail = React.createRef<HTMLVideoElement>()
+
+	timelineMargin = 24
+	thumbnailWidth = 196
+
+	constructor(props:BDVideoProps) {
+		super(props)
+		this.state = {}
+	}
 
 	setIO() {
 		const {inTime, outTime} = this.props
@@ -128,6 +146,11 @@ class BDVideo extends React.Component<BDVideoProps> {
 		const rate = playbackRate || 1
 		video.playbackRate = rate
 		this.setIO()
+		const thumbnail = this.thumbnail.current
+		const thumbData = this.state.thumbnail
+		if (thumbnail && thumbData) {
+			thumbnail.currentTime = thumbData.timestamp
+		}
 	}
 
 	componentDidMount() {
@@ -149,6 +172,22 @@ class BDVideo extends React.Component<BDVideoProps> {
 				return
 			}
 			onDrag(display)
+		}
+		video.onmousemove = e => {
+			const distanceFromBottom = video.height - e.layerY
+			if (distanceFromBottom > 50) {
+				this.setState({thumbnail: undefined})
+			} else {
+				const areaWidth = video.width - (this.timelineMargin * 2)
+				const videoPercentage = (e.layerX - this.timelineMargin) / areaWidth 
+				const targetTime = video.duration * videoPercentage
+				this.setState({
+					thumbnail: {
+						offsetX: e.layerX - (this.thumbnailWidth / 2),
+						timestamp: targetTime
+					}
+				})
+			}
 		}
 		this.setIO()
 	}
@@ -174,10 +213,12 @@ class BDVideo extends React.Component<BDVideoProps> {
 
 	render() {
 		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay} = this.props
+		const {thumbnail} = this.state
 
 		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
 			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}>{showOverlay && display.file.name}</div>
 			{showOverlay && this.getIO()}
+			{thumbnail && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnail.offsetX}} />}
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={true}
 				{...size} ref={this.video} style={{objectFit}} title={display.file.name} />
 		</div>
@@ -230,7 +271,6 @@ class App extends React.Component<{},AppState> {
 	} as ActionControls
 
 	syncPlaybackRates(playbackRate:number) {
-		// const displays = [...this.state.displays]
 		const {displays} = this.state
 		displays.forEach(i => i.playbackRate = playbackRate)
 		this.setState({displays}) 
@@ -250,6 +290,21 @@ class App extends React.Component<{},AppState> {
 			const targetTime = t1 + (spacing * i)
 			// loop time back to beginning once we exceed end of video
 			v.video!.currentTime = targetTime < duration ? targetTime : targetTime - duration
+		})
+	}
+
+	fillGrid(display:Display, count:number) {
+		const {displays} = this.state
+		const additions = count - displays.length
+		if (additions < 1) return
+		const newDisplays = [...Array(additions)].map((_, i) => {
+			const newDisplay = this.copyDisplay(display)
+			newDisplay.id += i
+			return newDisplay
+		})
+		this.setState({
+			displays: displays.concat(newDisplays),
+			maxId: newDisplays.pop()!.id
 		})
 	}
 
@@ -273,7 +328,7 @@ class App extends React.Component<{},AppState> {
 
 		window.onkeydown = ev => {
 			const key = ev.key.toLowerCase()
-			if (key in this.globalActions) {
+			if (key in this.globalActions && !ev.shiftKey && !ev.ctrlKey) {
 				this.globalActions[key]()
 				return
 			}
@@ -297,7 +352,7 @@ class App extends React.Component<{},AppState> {
 			} else {
 				const displayActions = {
 					"delete": () => this.deleteDisplay(activeDisplay),
-					"c": () => this.copyDisplay(activeDisplay),
+					"c": () => this.addDisplayCopy(activeDisplay),
 					"d": () => this.distributeTimes(activeDisplay),
 					"i": () => this.setVideoIO(activeDisplay, "in"),
 					"o": () => this.setVideoIO(activeDisplay, "out"),
@@ -307,6 +362,10 @@ class App extends React.Component<{},AppState> {
 					"arrowright": () => adjustDisplayTime(activeDisplay, 60),
 				} as ActionControls
 				key in displayActions && displayActions[key]()
+				if (key >= "2" && key <= "9") {
+					this.fillGrid(activeDisplay, parseInt(key))
+					this.distributeTimes(activeDisplay)
+				}
 			}
 		}
 
@@ -409,8 +468,13 @@ class App extends React.Component<{},AppState> {
 			startTime,
 			triggerResize: false
 		}
+		return newDisplay
+	}
+
+	addDisplayCopy(display:Display) {
+		const newDisplay = this.copyDisplay(display)
 		this.setState({
-			maxId,
+			maxId: newDisplay.id,
 			displays: this.state.displays.concat(newDisplay)
 		})
 	}
