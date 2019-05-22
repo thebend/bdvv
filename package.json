@@ -3,7 +3,9 @@
 	"version": "0.1.0",
 	"private": true,
 	"dependencies": {
+		"@babel/polyfill": "^7.4.4",
 		"react": "^16.8.6",
+		"react-app-polyfill": "^1.0.1",
 		"react-dom": "^16.8.6",
 		"react-scripts": "2.1.8",
 		"typescript": "^3.4.4"

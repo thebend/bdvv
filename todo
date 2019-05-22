@@ -23,6 +23,10 @@ x Make installable
 x Hide thumb on exit
 x Indicate playback speed in overlay
 x Fill screen shortcut with single video
+x Add toggle for showing thumbnails
+x Put thumbnail above video shadow effect
+x No fullscreen in Edge
+o Refactor with redux? No not for now
 
 Business
 - collect metadata
@@ -34,6 +38,9 @@ o splash page:
  - scour video game screen capture or TV episode to find highlights
  - scour suveillance video footage
 - Test in other browsers
- - No drag/drop in IE11
- - No fullscreen in Edge
-- Refactor with redux?
+ - No IE11 functionality
+ - Video UI hidden in Edge
+ - Off by one pixel error with Edge (IE?)
+ - Overlay prevents controls from appearing
+- Have some settings save in client
+- Add visual toggles in help menu

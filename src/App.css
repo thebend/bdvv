@@ -125,5 +125,6 @@ svg.iomarker {
 
 video.thumbnail {
 	position: absolute;
-	bottom: 24px;
+	bottom: 36px;
+	z-index: 1;
 }

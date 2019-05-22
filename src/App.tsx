@@ -1,3 +1,5 @@
+// import 'react-app-polyfill/ie11'
+// import '@babel/polyfill'
 import React from 'react'
 import './App.css'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
@@ -10,6 +12,7 @@ type ObjectFit = "fill"|"contain"|"cover"|"scale-down"
 const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFit[]
 
 const SPLASH = <section id="splash">
+	<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
 	<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
 </section>
 
@@ -102,6 +105,7 @@ interface BDVideoProps {
 		height:number
 	},
 	showOverlay:boolean,
+	showThumbnail:boolean,
 	inTime?:number,
 	outTime?:number,
 	playbackRate:number,
@@ -113,7 +117,7 @@ interface BDVideoProps {
 }
 
 interface BDVideoState {
-	thumbnail?:{
+	thumbnailState?:{
 		offsetX:number,
 		timestamp:number
 	}
@@ -124,11 +128,14 @@ class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 	thumbnail = React.createRef<HTMLVideoElement>()
 
 	timelineMargin = 24
+	dragMargin = 80
 	thumbnailWidth = 196
+	thumbnailMargin = 32
 
 	constructor(props:BDVideoProps) {
 		super(props)
 		this.state = {}
+		this.hoverThumbnail = this.hoverThumbnail.bind(this)
 	}
 
 	setIO() {
@@ -141,21 +148,45 @@ class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		}
 	}
 
+	hoverThumbnail(e:MouseEvent) {
+		const video = this.video.current
+		if (!video) return
+		const distanceFromBottom = video.height - e.layerY
+		if (distanceFromBottom > this.thumbnailMargin) {
+			this.setState({thumbnailState: undefined})
+		} else {
+			const areaWidth = video.width - (this.timelineMargin * 2)
+			const videoPercentage = (e.layerX - this.timelineMargin) / areaWidth 
+			const targetTime = video.duration * videoPercentage
+			this.setState({
+				thumbnailState: {
+					offsetX: e.layerX - (this.thumbnailWidth / 2),
+					timestamp: targetTime
+				}
+			})
+		}
+	}
+
 	componentDidUpdate() {
-		const {playbackRate} = this.props
+		const {playbackRate, showThumbnail} = this.props
 		const video = this.video.current!
 		const rate = playbackRate || 1
 		video.playbackRate = rate
 		this.setIO()
-		const thumbnail = this.thumbnail.current
-		const thumbData = this.state.thumbnail
-		if (thumbnail && thumbData) {
-			thumbnail.currentTime = thumbData.timestamp
+		if (showThumbnail) {
+			const {thumbnailState} = this.state
+			const thumbnail = this.thumbnail.current
+			if (thumbnail && thumbnailState) {
+				thumbnail.currentTime = thumbnailState.timestamp
+			}
+			video.onmouseover = this.hoverThumbnail
+		} else {
+			video.onmouseover = null
 		}
 	}
 
 	componentDidMount() {
-		const {display, onLoad, onError, onDrag} = this.props
+		const {display, onLoad, onError, onDrag, showThumbnail} = this.props
 		const video = this.video.current!
 		display.video = video
 		if (display.startTime) {
@@ -168,30 +199,15 @@ class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		video.ondragstart = e => {
 			const target = e.target! as HTMLVideoElement
 			const distanceFromBottom = target.height - e.offsetY
-			if (distanceFromBottom < 80) {
+			if (distanceFromBottom < this.dragMargin) {
 				e.preventDefault()
 				return
 			}
 			onDrag(display)
 		}
-		video.onmousemove = e => {
-			const distanceFromBottom = video.height - e.layerY
-			if (distanceFromBottom > 50) {
-				this.setState({thumbnail: undefined})
-			} else {
-				const areaWidth = video.width - (this.timelineMargin * 2)
-				const videoPercentage = (e.layerX - this.timelineMargin) / areaWidth 
-				const targetTime = video.duration * videoPercentage
-				this.setState({
-					thumbnail: {
-						offsetX: e.layerX - (this.thumbnailWidth / 2),
-						timestamp: targetTime
-					}
-				})
-			}
-		}
+		video.onmousemove = showThumbnail ? this.hoverThumbnail : null
 		video.onmouseout = e => {
-			this.setState({thumbnail: undefined})
+			this.setState({thumbnailState: undefined})
 		}
 		this.setIO()
 	}
@@ -216,13 +232,13 @@ class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 	}
 
 	render() {
-		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, playbackRate} = this.props
-		const {thumbnail} = this.state
+		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, showThumbnail, playbackRate} = this.props
+		const {thumbnailState} = this.state
 
 		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
 			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}>{showOverlay && `${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}</div>
 			{showOverlay && this.getIO()}
-			{thumbnail && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnail.offsetX}} />}
+			{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnailState.offsetX}} />}
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={true}
 				{...size} ref={this.video} style={{objectFit}} title={display.file.name} />
 		</div>
@@ -237,6 +253,7 @@ interface Dimensions {
 interface AppState {
 	showInfo:boolean,
 	showHelp:boolean,
+	showThumbnails:boolean,
 	displays:Display[],
 	maxId:number,
 	activeDisplay?:Display,
@@ -255,13 +272,19 @@ interface ActionControls {
 	[key:string]: ()=>void
 }
 
-function toggleFullscreen(target?:HTMLVideoElement) {
-	if (!document.fullscreenEnabled) return
-	if (document.fullscreenElement) {
-		document.exitFullscreen()
+function fullscreenElement(element:HTMLElement) {
+	(element.requestFullscreen || (element as any).msRequestFullscreen || (element as any).webkitRequestFullscreen).call(element)
+}
+
+const fsEnabled = document.fullscreenEnabled || (document as any).msFullscreenEnabled || (document as any).webkitFullscreenEnabled
+const fsExit = (document.exitFullscreen || (document as any).msExitFullscreen || (document as any).webkitExitFullscreen).bind(document)
+function toggleFullscreen(target:HTMLElement = document.body) {
+	if (!fsEnabled) return
+	const fsElement = document.fullscreenElement || (document as any).msFullscreenElement || (document as any).webkitFullscreenElement
+	if (fsElement) {
+		fsExit()
 	} else {
-		// document.body.requestFullscreen()
-		(target || document.body).requestFullscreen()
+		fullscreenElement(target)
 	}
 }
 
@@ -272,6 +295,7 @@ class App extends React.Component<{},AppState> {
 		"h": () => this.setState({showHelp: !this.state.showHelp}),
 		// "i": () => this.setState({showInfo: !this.state.showInfo}),
 		"s": () => this.nextObjectFit(),
+		"t": () => this.setState({showThumbnails: !this.state.showThumbnails}),
 		"x": () => this.nextDimensionRatio()
 	} as ActionControls
 
@@ -319,6 +343,7 @@ class App extends React.Component<{},AppState> {
 		this.state = {
 			showInfo: false,
 			showHelp: true,
+			showThumbnails: true,
 			displays: [],
 			maxId: 0,
 			ratioIndex: 0,
@@ -346,7 +371,7 @@ class App extends React.Component<{},AppState> {
 					"arrowleft": () => adjustDisplayTime(activeDisplay, -.1, true),
 					"arrowright": () => adjustDisplayTime(activeDisplay, .1, true),
 					"s": () => this.syncPlaybackRates(activeDisplay.playbackRate),
-					"f": () => activeDisplay.video!.requestFullscreen()
+					"f": () => fullscreenElement(activeDisplay.video!)
 				} as ActionControls
 				key in shiftDisplayActions && shiftDisplayActions[key]()
 			} else if (ev.ctrlKey) {
@@ -386,13 +411,13 @@ class App extends React.Component<{},AppState> {
 			let droppedFiles = e.dataTransfer.files as FileList
 			const videoFiles = Array.from(droppedFiles).filter(i => i.type.startsWith('video/'))
 			let maxId = this.state.maxId
-			const newDisplays = videoFiles.map(file => { return {
+			const newDisplays = videoFiles.map(file => ({
 				id: ++maxId,
 				file,
 				url: URL.createObjectURL(file),
 				triggerResize: firstBatch,
 				playbackRate: 1
-			} as Display})
+			} as Display))
 
 			this.setState({
 				displays: this.state.displays.concat(newDisplays),
@@ -551,7 +576,7 @@ class App extends React.Component<{},AppState> {
 	}
 
 	render() {
-		const {displays, errorDisplays, activeDisplay, lastDisplay, showInfo, showHelp, aspectRatio, objectFit} = this.state
+		const {displays, errorDisplays, activeDisplay, lastDisplay, showInfo, showThumbnails, showHelp, aspectRatio, objectFit} = this.state
 		const size = this.getVideoSize()
 		return <>
 			{showInfo && lastDisplay && <div id="info-toggle">
@@ -564,6 +589,7 @@ class App extends React.Component<{},AppState> {
 				{displays.length == 0 && SPLASH}
 				{displays.map(i => <BDVideo size={size} objectFit={objectFit} key={i.id} display={i}
 					showOverlay={i == activeDisplay}
+					showThumbnail={showThumbnails}
 					playbackRate={i.playbackRate}
 					onDrag={display => this.setState({dragSrc: display})}
 					onMouseOver={() => this.setState({activeDisplay: i, lastDisplay: i})}
