@@ -27,6 +27,8 @@ x Add toggle for showing thumbnails
 x Put thumbnail above video shadow effect
 x No fullscreen in Edge
 x Off by one pixel error with Edge (IE?)
+x Video UI hidden in Edge
+x Overlay prevents controls from appearing
 o Refactor with redux? No not for now
 
 Business
@@ -38,9 +40,6 @@ o splash page:
  o Move "about" off of help into center
  - scour video game screen capture or TV episode to find highlights
  - scour suveillance video footage
-- Test in other browsers
- - No IE11 functionality
- - Video UI hidden in Edge
- - Overlay prevents controls from appearing
+- Add IE11 functionality
 - Have some settings save in client
 - Add visual toggles in help menu
