@@ -437,13 +437,14 @@ class App extends React.Component<{},AppState> {
 		if (displays.length < 2) return {width: viewport.x, height: viewport.y}
 
 		// try every number of rows up to a dedicated row for each video
-		let bestArea = 0, bestrows = 0, bestcols = 0
+		let bestArea = 0, width = 0, height = 0
 		const videoRatio = aspectRatio.ratio
 		for (let rows = 1; rows <= displays.length; rows++) {
 			// get the necessary number of columns with a given number of rows
 			const cols = Math.ceil(displays.length / rows)
 			// this determines the size of the resulting box
-			const x = viewport.x / cols, y = viewport.y / rows
+			const x = Math.floor(viewport.x / cols)
+			const y = Math.floor(viewport.y / rows)
 			// actual video dimensions will depend on ratio within the display box, being shrunk on one side
 			let vx = x, vy = y
 			if (videoRatio > x/y) {
@@ -456,13 +457,10 @@ class App extends React.Component<{},AppState> {
 			if (videoArea < bestArea) continue
 			// otherwise save this as best situation
 			bestArea = videoArea
-			bestrows = rows, bestcols = cols
+			width = x, height = y
 		}
 
-		return {
-			width: viewport.x / bestcols,
-			height: viewport.y / bestrows
-		}
+		return {width, height}
 	}
 
 	adjustVideoSpeed(display:Display, adjustment:number) {

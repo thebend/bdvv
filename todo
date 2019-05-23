@@ -26,6 +26,7 @@ x Fill screen shortcut with single video
 x Add toggle for showing thumbnails
 x Put thumbnail above video shadow effect
 x No fullscreen in Edge
+x Off by one pixel error with Edge (IE?)
 o Refactor with redux? No not for now
 
 Business
@@ -40,7 +41,6 @@ o splash page:
 - Test in other browsers
  - No IE11 functionality
  - Video UI hidden in Edge
- - Off by one pixel error with Edge (IE?)
  - Overlay prevents controls from appearing
 - Have some settings save in client
 - Add visual toggles in help menu
