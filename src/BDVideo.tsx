@@ -95,17 +95,21 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		const distanceFromBottom = video.height - e.layerY
 		if (distanceFromBottom > this.thumbnailMargin) {
 			this.setState({thumbnailState: undefined})
-		} else {
-			const areaWidth = video.width - margins.left - margins.right
-			const videoPercentage = (e.layerX - margins.left - margins.right) / areaWidth 
-			const targetTime = video.duration * videoPercentage
-			this.setState({
-				thumbnailState: {
-					offsetX: e.layerX - (this.thumbnailWidth / 2),
-					timestamp: targetTime
-				}
-			})
+			return
 		}
+		const timelineWidth = video.width - margins.left - margins.right
+		const videoPercentage = (e.layerX - margins.left) / timelineWidth 
+		if (videoPercentage < 0 || videoPercentage > 1) {
+			this.setState({thumbnailState: undefined})
+			return
+		}
+		const targetTime = video.duration * videoPercentage
+		this.setState({
+			thumbnailState: {
+				offsetX: e.layerX - (this.thumbnailWidth / 2),
+				timestamp: targetTime
+			}
+		})
 	}
 
 	componentDidUpdate() {
