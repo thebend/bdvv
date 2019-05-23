@@ -1,15 +1,16 @@
+// TODO: import only required polyfills
 // import 'react-app-polyfill/ie11'
-// should be smarter about my imports
 import '@babel/polyfill'
+// import 'core-js/modules/es6.array.from'
 import React from 'react'
 import './App.css'
 import { BDVideo, Display, ObjectFit, OBJECT_FITS } from './BDVideo'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
 import HELP from './Help'
 
-// TODO: add logo
 // TODO: refence react as third party library on cdn?
 
+// TODO: add logo
 const SPLASH = <section id="splash">
 	<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
 	<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
