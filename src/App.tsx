@@ -3,48 +3,15 @@
 import React from 'react'
 import './App.css'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
+import HELP from './Help'
+import { BDVideo, Display, ObjectFit, OBJECT_FITS } from './BDVideo';
 
 // TODO: add logo
 // TODO: refence react as third party library on cdn?
 
-// TODO: fix this TypeScript hack
-type ObjectFit = "fill"|"contain"|"cover"|"scale-down"
-const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFit[]
-
 const SPLASH = <section id="splash">
 	<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
 	<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
-</section>
-
-const HELP = <section id="help">
-	<h2>Usage</h2>
-	<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
-	<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
-	<h2>Shortcuts</h2><ol>
-		<li><em>C:</em> Clone video (+1m)</li>
-		<li><em>D:</em> Distribute times</li>
-		<li><em>H:</em> Toggle help</li>
-		{/* <li><em>I:</em> Toggle info overlay</li> */}
-		<li><em>M:</em> Toggle mute</li>
-		<li><em>R:</em> Delete video</li>
-		<li><em>S:</em> Change video scaling</li>
-		<li><em>X:</em> Change aspect ratio</li>
-		<li><em>← →:</em> Skip 1m</li>
-		<li><em>Shift ← →:</em> Skip 10%</li>
-		<li><em>Ctrl ← →:</em> Change speed</li>
-		<li><em>Shift+S</em> Sync speeds</li>
-		<li><em>Ctrl+W:</em> Close tab</li>
-		<li><em>F / F11:</em> Toggle fullscreen</li>
-		<li><em>Shift+F:</em> Fullscreen video</li>
-		<li><em>I / O:</em> Toggle in / out time</li>
-		<li><em>OO:</em> Restart video</li>
-		<li><em>2-9:</em> Fill 2-9 size grid</li>
-		<li><em>Drag&amp;Drop:</em> Reorder videos</li>
-	</ol>
-	<footer>
-		<h2>Privacy Disclaimer</h2>
-		<p>This tool records <b>no</b> filenames, screen grabs, or any other methods of identifying the actual contents of any video.  Only metadata about a video's format (codec, file size, resolution, and duration) may be recorded.</p>
-	</footer>
 </section>
 
 function stopDragDrop(e:Event) {
@@ -55,19 +22,6 @@ function stopDragDrop(e:Event) {
 function toggleMute(video?:HTMLVideoElement) {
 	if (!video) return
 	video.muted = !video.muted
-}
-
-interface IOMarkerProps {
-	offset:number,
-	xPadding:number,
-	color:string
-}
-function IOMarker({offset, xPadding, color}:IOMarkerProps) {
-	const diameter = 10
-	const yPadding = 16
-	return <svg className="iomarker" width={diameter} height={diameter} style={{bottom: yPadding + (diameter/2), left: xPadding + offset - (diameter/2)}} viewBox={`0 0 2 2`}>
-		<circle cx={1} cy={1} r={1} fill={color} />
-	</svg>
 }
 
 function adjustDisplayTime(display:Display, adjustment:number, percentage:boolean = false) {
@@ -82,166 +36,6 @@ function adjustDisplayTime(display:Display, adjustment:number, percentage:boolea
 		vid.currentTime = adjustment - diff
 	} else {
 		vid.currentTime = vid.currentTime + adjustment
-	}
-}
-
-interface Display {
-	id:number,
-	file:File,
-	url:string,
-	startTime?:number,
-	in?:number,
-	out?:number,
-	video?:HTMLVideoElement,
-	triggerResize:boolean,
-	playbackRate:number
-}
-
-interface BDVideoProps {
-	display:Display,
-	objectFit:ObjectFit,
-	size: {
-		width:number,
-		height:number
-	},
-	showOverlay:boolean,
-	showThumbnail:boolean,
-	inTime?:number,
-	outTime?:number,
-	playbackRate:number,
-	onMouseOver:()=>void,
-	onMouseOut:()=>void,
-	onLoad:()=>void
-	onError:()=>void
-	onDrag:(display:Display)=>void
-}
-
-interface BDVideoState {
-	thumbnailState?:{
-		offsetX:number,
-		timestamp:number
-	}
-}
-
-class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
-	video = React.createRef<HTMLVideoElement>()
-	thumbnail = React.createRef<HTMLVideoElement>()
-
-	timelineMargin = 24
-	dragMargin = 80
-	thumbnailWidth = 196
-	thumbnailMargin = 32
-
-	constructor(props:BDVideoProps) {
-		super(props)
-		this.state = {}
-		this.hoverThumbnail = this.hoverThumbnail.bind(this)
-	}
-
-	setIO() {
-		const {inTime, outTime} = this.props
-		const video = this.video.current!
-		video.ontimeupdate = e => {
-			const pastOut = outTime && outTime < video.currentTime
-			const beforeIn = inTime && inTime > video.currentTime
-			if (pastOut || beforeIn) video.currentTime = inTime || 0
-		}
-	}
-
-	hoverThumbnail(e:MouseEvent) {
-		const video = this.video.current
-		if (!video) return
-		const distanceFromBottom = video.height - e.layerY
-		if (distanceFromBottom > this.thumbnailMargin) {
-			this.setState({thumbnailState: undefined})
-		} else {
-			const areaWidth = video.width - (this.timelineMargin * 2)
-			const videoPercentage = (e.layerX - this.timelineMargin) / areaWidth 
-			const targetTime = video.duration * videoPercentage
-			this.setState({
-				thumbnailState: {
-					offsetX: e.layerX - (this.thumbnailWidth / 2),
-					timestamp: targetTime
-				}
-			})
-		}
-	}
-
-	componentDidUpdate() {
-		const {playbackRate, showThumbnail} = this.props
-		const video = this.video.current!
-		const rate = playbackRate || 1
-		video.playbackRate = rate
-		this.setIO()
-		if (showThumbnail) {
-			const {thumbnailState} = this.state
-			const thumbnail = this.thumbnail.current
-			if (thumbnail && thumbnailState) {
-				thumbnail.currentTime = thumbnailState.timestamp
-			}
-			video.onmouseover = this.hoverThumbnail
-		} else {
-			video.onmouseover = null
-		}
-	}
-
-	componentDidMount() {
-		const {display, onLoad, onError, onDrag, showThumbnail} = this.props
-		const video = this.video.current!
-		display.video = video
-		if (display.startTime) {
-			video.currentTime = display.startTime
-		} else {
-			video.onerror = onError
-			video.onloadeddata = e => video.currentTime = video.duration / 2
-			video.onloadedmetadata = onLoad
-		}
-		video.ondragstart = e => {
-			const target = e.target! as HTMLVideoElement
-			const distanceFromBottom = target.height - e.offsetY
-			if (distanceFromBottom < this.dragMargin) {
-				e.preventDefault()
-				return
-			}
-			onDrag(display)
-		}
-		video.onmousemove = showThumbnail ? this.hoverThumbnail : null
-		video.onmouseout = e => {
-			this.setState({thumbnailState: undefined})
-		}
-		this.setIO()
-	}
-
-	getIO() {
-		const {inTime, outTime} = this.props
-		const video = this.video.current!
-
-		if (inTime || outTime) {
-			const xPadding = video.width * .02
-			const duration = video.duration
-			const ip = inTime || 0
-			const op = outTime || duration
-			const timelineWidth = video.width - (xPadding*2)
-			const ix = (ip / duration) * timelineWidth
-			const ox = (op / duration) * timelineWidth
-			return <>
-				<IOMarker xPadding={xPadding} offset={ix} color="green" />
-				<IOMarker xPadding={xPadding} offset={ox} color="red" />
-			</>
-		}
-	}
-
-	render() {
-		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, showThumbnail, playbackRate} = this.props
-		const {thumbnailState} = this.state
-
-		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
-			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`}}>{showOverlay && `${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}</div>
-			{showOverlay && this.getIO()}
-			{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnailState.offsetX}} />}
-			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={true}
-				{...size} ref={this.video} style={{objectFit}} title={display.file.name} />
-		</div>
 	}
 }
 
