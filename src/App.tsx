@@ -2,9 +2,9 @@
 // import '@babel/polyfill'
 import React from 'react'
 import './App.css'
+import { BDVideo, Display, ObjectFit, OBJECT_FITS } from './BDVideo'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
 import HELP from './Help'
-import { BDVideo, Display, ObjectFit, OBJECT_FITS } from './BDVideo';
 
 // TODO: add logo
 // TODO: refence react as third party library on cdn?

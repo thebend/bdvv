@@ -4,17 +4,28 @@ import React from 'react'
 export type ObjectFit = "fill"|"contain"|"cover"|"scale-down"
 export const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFit[]
 
-export const MS_BROWSER = navigator.userAgent.indexOf(' Trident/') > -1 || navigator.userAgent.indexOf(' Edge/') > -1
+function getBrowser() {
+	if (navigator.userAgent.indexOf(' Trident/') > -1) return 'IE'
+	if (navigator.userAgent.indexOf(' Edge/') > -1) return 'Edge'
+	return 'Chrome'
+}
+
+export const browser = getBrowser()
+export const msBrowser = ["Edge","IE"].indexOf(browser) > -1
+
 const VIDEO_MARGINS = {
 	"edge": {
-		left: 104,
-		right: 192,
-		bottom: 24
+		"left": 116,
+		"right": 220,
+		"bottom": 24
 	},
 	"chrome": {
-
+		"left": 24,
+		"right": 24,
+		"bottom": 16
 	}
 }
+const margins = browser == "Chrome" ? VIDEO_MARGINS["chrome"] : VIDEO_MARGINS["edge"]
 
 export interface Display {
 	id:number,
@@ -58,10 +69,9 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 	video = React.createRef<HTMLVideoElement>()
 	thumbnail = React.createRef<HTMLVideoElement>()
 
-	timelineMargin = 24
 	dragMargin = 80
 	thumbnailWidth = 196
-	thumbnailMargin = 32
+	thumbnailMargin = margins.bottom + 8
 
 	constructor(props:BDVideoProps) {
 		super(props)
@@ -86,8 +96,8 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		if (distanceFromBottom > this.thumbnailMargin) {
 			this.setState({thumbnailState: undefined})
 		} else {
-			const areaWidth = video.width - (this.timelineMargin * 2)
-			const videoPercentage = (e.layerX - this.timelineMargin) / areaWidth 
+			const areaWidth = video.width - margins.left - margins.right
+			const videoPercentage = (e.layerX - margins.left - margins.right) / areaWidth 
 			const targetTime = video.duration * videoPercentage
 			this.setState({
 				thumbnailState: {
@@ -148,16 +158,15 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		const video = this.video.current!
 
 		if (inTime || outTime) {
-			const xPadding = video.width * .02
 			const duration = video.duration
 			const ip = inTime || 0
 			const op = outTime || duration
-			const timelineWidth = video.width - (xPadding*2)
+			const timelineWidth = video.width - margins.left - margins.right
 			const ix = (ip / duration) * timelineWidth
 			const ox = (op / duration) * timelineWidth
 			return <>
-				<IOMarker xPadding={xPadding} offset={ix} color="green" />
-				<IOMarker xPadding={xPadding} offset={ox} color="red" />
+				<IOMarker offset={ix} color="green" />
+				<IOMarker offset={ox} color="red" />
 			</>
 		}
 	}
@@ -167,10 +176,10 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		const {thumbnailState} = this.state
 
 		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
-			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: MS_BROWSER ? 'none' : 'auto'}}>{showOverlay && `${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}</div>
+			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: msBrowser ? 'none' : 'auto'}}>{showOverlay && `${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}</div>
 			{showOverlay && this.getIO()}
 			{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnailState.offsetX}} />}
-			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!MS_BROWSER}
+			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
 				{...size} ref={this.video} style={{objectFit}} title={display.file.name} />
 		</div>
 	}
@@ -178,13 +187,12 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 
 interface IOMarkerProps {
 	offset:number,
-	xPadding:number,
 	color:string
 }
-function IOMarker({offset, xPadding, color}:IOMarkerProps) {
+function IOMarker({offset, color}:IOMarkerProps) {
 	const diameter = 10
-	const yPadding = 16
-	return <svg className="iomarker" width={diameter} height={diameter} style={{bottom: yPadding + (diameter/2), left: xPadding + offset - (diameter/2)}} viewBox={`0 0 2 2`}>
+	const yMargin = margins.bottom
+	return <svg className="iomarker" width={diameter} height={diameter} style={{bottom: yMargin + (diameter/2), left: margins.left + offset - (diameter/2)}} viewBox={`0 0 2 2`}>
 		<circle cx={1} cy={1} r={1} fill={color} />
 	</svg>
 }

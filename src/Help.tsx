@@ -1,3 +1,5 @@
+import React from 'react'
+
 export const HELP = <section id="help">
 	<h2>Usage</h2>
 	<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
