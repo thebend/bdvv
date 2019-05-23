@@ -7,6 +7,10 @@ html, body, #root, main {
 	background-color: black;
 	font-family: Arial, sans-serif;
 }
+/* IE11 has no default style for main tag */
+main {
+	display: block;
+}
 
 em {
 	font-weight: bold;

@@ -1,5 +1,6 @@
 // import 'react-app-polyfill/ie11'
-// import '@babel/polyfill'
+// should be smarter about my imports
+import '@babel/polyfill'
 import React from 'react'
 import './App.css'
 import { BDVideo, Display, ObjectFit, OBJECT_FITS } from './BDVideo'
@@ -83,7 +84,7 @@ function toggleFullscreen(target:HTMLElement = document.body) {
 }
 
 class App extends React.Component<{},AppState> {
-	viewport:React.RefObject<HTMLElement>
+	viewport = React.createRef<HTMLElement>()
 	globalActions = {
 		"f": () => toggleFullscreen(),
 		"h": () => this.setState({showHelp: !this.state.showHelp}),
@@ -133,7 +134,6 @@ class App extends React.Component<{},AppState> {
 
 	constructor(props:{}) {
 		super(props)
-		this.viewport = React.createRef<HTMLElement>()
 		this.state = {
 			showInfo: false,
 			showHelp: true,
@@ -202,7 +202,7 @@ class App extends React.Component<{},AppState> {
 			stopDragDrop(e)
 			if (!e.dataTransfer) return
 			const {firstBatch} = this.state
-			let droppedFiles = e.dataTransfer.files as FileList
+			const droppedFiles = e.dataTransfer.files as FileList
 			const videoFiles = Array.from(droppedFiles).filter(i => i.type.startsWith('video/'))
 			let maxId = this.state.maxId
 			const newDisplays = videoFiles.map(file => ({

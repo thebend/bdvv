@@ -118,7 +118,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		const rate = playbackRate || 1
 		video.playbackRate = rate
 		this.setIO()
-		if (showThumbnail) {
+		if (showThumbnail && browser != 'IE') {
 			const {thumbnailState} = this.state
 			const thumbnail = this.thumbnail.current
 			if (thumbnail && thumbnailState) {
@@ -135,7 +135,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		const video = this.video.current!
 		display.video = video
 		if (display.startTime) {
-			video.currentTime = display.startTime
+			video.onload = () => { video.currentTime = display.startTime! }
 		} else {
 			video.onerror = onError
 			video.onloadeddata = e => video.currentTime = video.duration / 2
@@ -150,7 +150,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 			}
 			onDrag(display)
 		}
-		video.onmousemove = showThumbnail ? this.hoverThumbnail : null
+		video.onmousemove = showThumbnail && browser != 'IE' ? this.hoverThumbnail : null
 		video.onmouseout = e => {
 			this.setState({thumbnailState: undefined})
 		}
@@ -169,8 +169,8 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 			const ix = (ip / duration) * timelineWidth
 			const ox = (op / duration) * timelineWidth
 			return <>
-				<IOMarker offset={ix} color="green" />
-				<IOMarker offset={ox} color="red" />
+				<IOMarker offset={ix} color="gold" />
+				<IOMarker offset={ox} color="gold" />
 			</>
 		}
 	}
@@ -196,7 +196,9 @@ interface IOMarkerProps {
 function IOMarker({offset, color}:IOMarkerProps) {
 	const diameter = 10
 	const yMargin = margins.bottom
-	return <svg className="iomarker" width={diameter} height={diameter} style={{bottom: yMargin + (diameter/2), left: margins.left + offset - (diameter/2)}} viewBox={`0 0 2 2`}>
+	return <svg className="iomarker" width={diameter} height={diameter} viewBox={`0 0 2 2`}
+		style={{bottom: yMargin + (diameter/2), left: margins.left + offset - (diameter/2)}}
+	>
 		<circle cx={1} cy={1} r={1} fill={color} />
 	</svg>
 }
