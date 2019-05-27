@@ -4,9 +4,10 @@ import '@babel/polyfill'
 // import 'core-js/modules/es6.array.from'
 import React from 'react'
 import './App.css'
-import { BDVideo, Display, ObjectFit, OBJECT_FITS } from './BDVideo'
+import { BDVideo, Display } from './BDVideo'
+import { ObjectFit, OBJECT_FITS } from './ObjectFit'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
-import HELP from './Help'
+import Help from './Help'
 
 // TODO: refence react as third party library on cdn?
 
@@ -392,16 +393,27 @@ class App extends React.Component<{},AppState> {
 					inTime={i.in} outTime={i.out}
 				/>)}
 			</main>
-			{errorDisplays.length > 0 && <section id="errors">
-				<h2>Errors</h2><ol>
-					{errorDisplays.map((display, i) => <li key={i}>{display.file.name} ({display.file.type})</li>)}
-				</ol>
-				<p>Only videos supported by your web browser will play successfully.  <code>.mp4</code> and <code>.webm</code> files are good bets.</p>
-				<form onSubmit={() => this.setState({errorDisplays: []})}><button>Dismiss</button></form>
-			</section>}
-			{showHelp && HELP}
+			{errorDisplays.length > 0 && <ErrorDisplay errorDisplays={errorDisplays} dismissCallback={() => this.setState({errorDisplays: []})} />}
+			{showHelp && <Help
+				{...{aspectRatio, objectFit}}
+				aspectRatioCallback={aspectRatio => this.setState({aspectRatio})}
+				objectFitCallback={objectFit => this.setState({objectFit})} />}
 		</>
 	}
+}
+
+interface ErrorDisplayProps {
+	errorDisplays:Display[],
+	dismissCallback:()=>void
+}
+function ErrorDisplay({errorDisplays, dismissCallback}:ErrorDisplayProps) {
+	return <section id="errors">
+		<h2>Errors</h2><ol>
+			{errorDisplays.map((display, i) => <li key={i}>{display.file.name} ({display.file.type})</li>)}
+		</ol>
+		<p>Only videos supported by your web browser will play successfully.  <code>.mp4</code> and <code>.webm</code> files are good bets.</p>
+		<form onSubmit={dismissCallback}><button>Dismiss</button></form>
+	</section>
 }
 
 export default App

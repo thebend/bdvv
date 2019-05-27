@@ -29,8 +29,11 @@ x No fullscreen in Edge
 x Off by one pixel error with Edge (IE?)
 x Video UI hidden in Edge
 x Overlay prevents controls from appearing
+x Add visual toggles in help menu
 o Add basic IE11 functionality
 o Refactor with redux? No not for now
+o Splash page
+ x Move "about" off of help into center
 
 Business
 - collect metadata
@@ -38,8 +41,6 @@ Business
 
 Features
 o splash page:
- o Move "about" off of help into center
  - scour video game screen capture or TV episode to find highlights
  - scour suveillance video footage
 - Have some settings save in client
-- Add visual toggles in help menu

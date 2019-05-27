@@ -25,44 +25,6 @@ em {
 	color: #ddd;
 }
 
-#help {
-	position: absolute;
-	top: 0;
-	right: 0;
-	width: 20rem;
-	background-color: #666;
-	font-size: 1.3em;
-	padding: .5em;
-	color: white;
-	box-shadow: -1px 0 2px 0 #333;
-	height: 100vh;
-	font-family: Consolas, monospace;
-	overflow: auto;
-}
-
-#help h2 {
-	font-size: 1.2em;
-	margin: 0 0 .2em 0;
-}
-#help p {
-	margin: 0 0 1em 0;
-	font-size: 0.8em;
-}
-
-#help ol {
-	list-style: none;
-	margin: 0 0 1em 0;
-	padding: 0;
-}
-#help li {
-	margin: .3em auto;
-}
-#help footer {
-	font-size: smaller;
-	color: #eee;
-
-}
-
 #info-toggle {
 	color: white;
 	font-size: 2em;

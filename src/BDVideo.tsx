@@ -1,8 +1,5 @@
 import React from 'react'
-
-// TODO: fix this TypeScript hack
-export type ObjectFit = "fill"|"contain"|"cover"|"scale-down"
-export const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFit[]
+import {ObjectFit} from './ObjectFit'
 
 function getBrowser() {
 	if (navigator.userAgent.indexOf(' Trident/') > -1) return 'IE'

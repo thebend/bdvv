@@ -1,0 +1,42 @@
+#help {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 20rem;
+	background-color: #666;
+	font-size: 1.1rem;
+	padding: .5em;
+	color: white;
+	box-shadow: -1px 0 2px 0 #333;
+	height: 100vh;
+	overflow: auto;
+}
+
+#help h2 {
+	font-size: 1.2em;
+	margin: 0 0 .2em 0;
+}
+#help p,
+#help form {
+	margin: 0 0 1em 0;
+}
+#help label {
+	margin-right: 0.5em;
+}
+
+#help ol,
+#help form {
+	margin: 0 0 1em 0.5em;
+}
+#help ol {
+	list-style: none;
+	font-family: Consolas, monospace;
+	padding: 0;
+}
+#help li {
+	margin: .3em auto;
+}
+#help footer {
+	color: #eee;
+	font-size: 0.9em;
+}
