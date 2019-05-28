@@ -7,6 +7,7 @@ const SHORTCUTS = <section id="shortcuts">
 	<h2>Shortcuts</h2><ol>
 		<li><em>C:</em> Clone video (+1m)</li>
 		<li><em>D:</em> Distribute times</li>
+		<li><em>E:</em> Remove everything else</li>
 		<li><em>F:</em> Toggle fullscreen</li>
 		<li><em>Shift+F:</em> Fullscreen video</li>
 		<li><em>H:</em> Toggle help</li>

@@ -13,8 +13,12 @@ import Help from './Help'
 
 // TODO: add logo
 const SPLASH = <section id="splash">
-	<p>Drag and drop any number of videos to auto-play in an optimally arranged grid.</p>
-	<p>Videos start half-way in and loop, ensuring immediate, continuous action, but also start muted to avoid chaotic, clashing audio and prevent disturbing others.</p>
+	<p>Auto-play any number of videos in an optimally arranged grid with simple drag-and-drop.  Videos start half-way in and loop, ensuring immediate, continuous immersion.</p>
+	<p>Find your favourite moments quickly with thumbnail scrubbing and keyboard shortcuts to jump ahead in time 1m (→) or 10% (Shift →), or adjust playback speed (Ctrl →).</p>
+	<p>Use shortcut keys to rapidly (c)opy or (r)emove displays, set (i)n/(o)ut loop points, (f)ullscreen the display, toggle (m)ute, etc.</p>
+	<p>Great for scouring surveillance footage, finding the best highlights from your last gaming stream, and more!</p>
+	{/* <img src="clipart/surveillance.jpg" alt="Surveillance" />
+	<img src="clipart/television.jpg" alt="Television" /> */}
 </section>
 
 function stopDragDrop(e:Event) {
@@ -181,6 +185,7 @@ class App extends React.Component<{},AppState> {
 					"delete": () => this.deleteDisplay(activeDisplay),
 					"c": () => this.addDisplayCopy(activeDisplay),
 					"d": () => this.distributeTimes(activeDisplay),
+					"e": () => this.setState({displays: [activeDisplay,]}),
 					"i": () => this.setVideoIO(activeDisplay, "in"),
 					"o": () => this.setVideoIO(activeDisplay, "out"),
 					"m": () => toggleMute(activeDisplay.video),
