@@ -11,7 +11,6 @@ const SHORTCUTS = <section id="shortcuts">
 		<li><em>F:</em> Toggle fullscreen</li>
 		<li><em>Shift+F:</em> Fullscreen video</li>
 		<li><em>H:</em> Toggle help</li>
-		{/* <li><em>I:</em> Toggle info overlay</li> */}
 		<li><em>I:</em> Toggle in point</li>
 		<li><em>O:</em> Toggle out point</li>
 		<li><em>M:</em> Toggle mute</li>
@@ -54,7 +53,7 @@ export function Help(props:HelpSettingsProps) {
 			<form>
 				<SelectInput
 					name="objectScale" label="Video Fit/Fill"
-					value={props.objectFit} choices={OBJECT_FITS.map((v, i) => <option key={i} value={v}>{v}</option>)}
+					value={props.objectFit} choices={OBJECT_FITS.map((v, i) => <option key={i} value={v}>{v[0].toUpperCase()+v.substr(1)}</option>)}
 					callback={i => props.objectFitCallback(i as ObjectFit)} /><br />
 				<SelectInput
 					name="aspectRatio" label="Aspect Ratio"

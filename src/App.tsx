@@ -52,7 +52,6 @@ interface Dimensions {
 }
 
 interface AppState {
-	showInfo:boolean,
 	showHelp:boolean,
 	showThumbnails:boolean,
 	displays:Display[],
@@ -94,7 +93,6 @@ class App extends React.Component<{},AppState> {
 	globalActions = {
 		"f": () => toggleFullscreen(),
 		"h": () => this.setState({showHelp: !this.state.showHelp}),
-		// "i": () => this.setState({showInfo: !this.state.showInfo}),
 		"s": () => this.nextObjectFit(),
 		"t": () => this.setState({showThumbnails: !this.state.showThumbnails}),
 		"x": () => this.nextDimensionRatio()
@@ -141,7 +139,6 @@ class App extends React.Component<{},AppState> {
 	constructor(props:{}) {
 		super(props)
 		this.state = {
-			showInfo: false,
 			showHelp: true,
 			showThumbnails: true,
 			displays: [],
@@ -375,14 +372,9 @@ class App extends React.Component<{},AppState> {
 	}
 
 	render() {
-		const {displays, errorDisplays, activeDisplay, lastDisplay, showInfo, showThumbnails, showHelp, aspectRatio, objectFit} = this.state
+		const {displays, errorDisplays, activeDisplay, lastDisplay, showThumbnails, showHelp, aspectRatio, objectFit} = this.state
 		const size = this.getVideoSize()
 		return <>
-			{showInfo && lastDisplay && <div id="info-toggle">
-				{aspectRatio.name}<br />
-				Scale strategy: {objectFit}<br />
-				{lastDisplay.file.name}
-			</div>}
 			<main ref={this.viewport}
 				onDrop={e => this.reorderDisplays(e.target)}>
 				{displays.length == 0 && SPLASH}

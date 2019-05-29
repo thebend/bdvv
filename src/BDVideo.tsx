@@ -181,7 +181,9 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 			{showOverlay && this.getIO()}
 			{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnailState.offsetX}} />}
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
-				{...size} ref={this.video} style={{objectFit}} title={display.file.name} />
+				{...size} ref={this.video} style={{objectFit}}
+				// title={display.file.name} // causes hover to display title which gets in the way
+				/>
 		</div>
 	}
 }

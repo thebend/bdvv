@@ -25,18 +25,6 @@ em {
 	color: #ddd;
 }
 
-#info-toggle {
-	color: white;
-	font-size: 2em;
-	position: absolute;
-	text-align: center;
-	top: 50%;
-	right: 50%;
-	transform: translateY(-50%) translateX(50%);
-	width: auto;
-	z-index: 1;
-}
-
 .display {
 	display: inline-block;
 	position: relative;

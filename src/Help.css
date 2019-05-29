@@ -40,3 +40,7 @@
 	color: #eee;
 	font-size: 0.9em;
 }
+#help select,
+#help input {
+	font-size: 1em;
+}
