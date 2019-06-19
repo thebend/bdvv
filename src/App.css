@@ -25,32 +25,11 @@ em {
 	color: #ddd;
 }
 
-.display {
-	display: inline-block;
-	position: relative;
-}
-.display-border {
-	position: absolute;
-}
-.display:hover .display-border {
-	border: 1px solid white;
-}
-.display-border {
-	color: #eee;
-	font-size: larger;
-	text-align: center;
-	vertical-align: top;
-	font-family: Consolas, monospace;
-	font-weight: bold;
-	box-sizing: border-box;
-}
-
 #errors {
 	position: absolute;
 	bottom: 0;
 	width: 100%;
 	z-index: 1;
-	/* background-color: #a88; */
 	background-color: rgb(190, 128, 128);
 	color: rgb(59, 0, 0);
 	padding: 1rem;

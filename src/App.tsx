@@ -8,6 +8,7 @@ import { BDVideo, Display } from './BDVideo'
 import { ObjectFit, OBJECT_FITS } from './ObjectFit'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
 import Help from './Help'
+import { toggleFullscreen } from './FullScreen'
 
 // TODO: refence react as third party library on cdn?
 
@@ -23,26 +24,6 @@ const SPLASH = <section id="splash">
 function stopDragDrop(e:Event) {
 	e.preventDefault()
 	e.stopPropagation()
-}
-
-function toggleMute(video?:HTMLVideoElement) {
-	if (!video) return
-	video.muted = !video.muted
-}
-
-function adjustDisplayTime(display:Display, adjustment:number, percentage:boolean = false) {
-	const vid = display.video
-	if (!vid) return
-	const end = vid.duration
-	if (percentage) {
-		adjustment = end * adjustment
-	}
-	const diff = end - vid.currentTime
-	if (adjustment > diff) {
-		vid.currentTime = adjustment - diff
-	} else {
-		vid.currentTime = vid.currentTime + adjustment
-	}
 }
 
 interface Dimensions {
@@ -69,22 +50,6 @@ interface AppState {
 
 interface ActionControls {
 	[key:string]: ()=>void
-}
-
-function fullscreenElement(element:HTMLElement) {
-	(element.requestFullscreen || (element as any).msRequestFullscreen || (element as any).webkitRequestFullscreen).call(element)
-}
-
-const fsEnabled = document.fullscreenEnabled || (document as any).msFullscreenEnabled || (document as any).webkitFullscreenEnabled
-const fsExit = (document.exitFullscreen || (document as any).msExitFullscreen || (document as any).webkitExitFullscreen).bind(document)
-function toggleFullscreen(target:HTMLElement = document.body) {
-	if (!fsEnabled) return
-	const fsElement = document.fullscreenElement || (document as any).msFullscreenElement || (document as any).webkitFullscreenElement
-	if (fsElement) {
-		fsExit()
-	} else {
-		fullscreenElement(target)
-	}
 }
 
 class App extends React.Component<{},AppState> {
@@ -150,6 +115,20 @@ class App extends React.Component<{},AppState> {
 			errorDisplays: [],
 		}
 
+		// const testState = {
+		// 	displays: [{
+		// 		id: 1,
+		// 		file: new File([], "test"),
+		// 		url: "2.mp4",
+		// 		triggerResize: true,
+		// 		playbackRate: 1
+		// 	}],
+		// 	maxId: 1,
+		// 	firstBatch: false,
+		// 	showHelp: false
+		// }
+		// this.state = Object.assign({}, this.state, testState)
+
 		window.onresize = () => this.updateDimensions()
 
 		window.onkeydown = ev => {
@@ -164,10 +143,7 @@ class App extends React.Component<{},AppState> {
 
 			if (ev.shiftKey) {
 				const shiftDisplayActions = {
-					"arrowleft": () => adjustDisplayTime(activeDisplay, -.1, true),
-					"arrowright": () => adjustDisplayTime(activeDisplay, .1, true),
 					"s": () => this.syncPlaybackRates(activeDisplay.playbackRate),
-					"f": () => fullscreenElement(activeDisplay.video!)
 				} as ActionControls
 				key in shiftDisplayActions && shiftDisplayActions[key]()
 			} else if (ev.ctrlKey) {
@@ -184,10 +160,7 @@ class App extends React.Component<{},AppState> {
 					"e": () => this.setState({displays: [activeDisplay,]}),
 					"i": () => this.setVideoIO(activeDisplay, "in"),
 					"o": () => this.setVideoIO(activeDisplay, "out"),
-					"m": () => toggleMute(activeDisplay.video),
 					"r": () => this.deleteDisplay(activeDisplay),
-					"arrowleft": () => adjustDisplayTime(activeDisplay, -60),
-					"arrowright": () => adjustDisplayTime(activeDisplay, 60),
 				} as ActionControls
 				key in displayActions && displayActions[key]()
 				if (key >= "2" && key <= "9") {
@@ -387,6 +360,13 @@ class App extends React.Component<{},AppState> {
 					onLoad={() => i.triggerResize && this.setRecommendedAspectRatio()}
 					onError={() => this.handleVideoError(i)}
 					inTime={i.in} outTime={i.out}
+					removeCallback={() => this.deleteDisplay(i)}
+					copyCallback={() => this.addDisplayCopy(i)}
+					exclusiveCallback={() => this.setState({displays: [i]})}
+					staggerCallback={() => this.distributeTimes(i)}
+					inCallback={() => this.setVideoIO(i, "in")}
+					outCallback={() => this.setVideoIO(i, "out")}
+					speedCallback={adjustment => this.adjustVideoSpeed(i, adjustment)}
 				/>)}
 			</main>
 			{errorDisplays.length > 0 && <ErrorDisplay errorDisplays={errorDisplays} dismissCallback={() => this.setState({errorDisplays: []})} />}

@@ -1,0 +1,45 @@
+.display {
+	display: inline-block;
+	position: relative;
+}
+.display-border {
+	position: absolute;
+	border: 1px solid white;
+	display: none;
+	color: #eee;
+	font-size: larger;
+	text-align: center;
+	vertical-align: top;
+	font-family: Consolas, monospace;
+	font-weight: bold;
+	box-sizing: border-box;
+}
+.display:hover .display-border {
+	display: block;
+}
+
+.display-controls {
+	position: absolute;
+	right: 1em;
+	top: 1em;
+	width: 1.8em;
+	text-align: center;
+	display: none;
+	flex-direction: column;
+	z-index: 1;
+}
+.display:hover .display-controls {
+	display: flex;
+}
+.display-controls button {
+	font-size: 1.3em;
+	font-weight: bold;
+	font-family: Consolas, monospace;
+}
+.display-controls button:first-child {
+	border-radius: 0.3em 0.3em 0 0;
+}
+.display-controls button:last-child {
+	border-radius: 0 0 0.3em 0.3em;
+}
+

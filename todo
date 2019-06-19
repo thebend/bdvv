@@ -30,6 +30,7 @@ x Off by one pixel error with Edge (IE?)
 x Video UI hidden in Edge
 x Overlay prevents controls from appearing
 x Add visual toggles in help menu
+x Add on-screen controls
 o Add basic IE11 functionality
 o Refactor with redux? No not for now
 o Splash page

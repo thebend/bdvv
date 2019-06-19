@@ -1,5 +1,7 @@
 import React from 'react'
 import {ObjectFit} from './ObjectFit'
+import './BDVideo.css'
+import { fullscreenElement } from './FullScreen'
 
 function getBrowser() {
 	if (navigator.userAgent.indexOf(' Trident/') > -1) return 'IE'
@@ -9,6 +11,10 @@ function getBrowser() {
 
 export const browser = getBrowser()
 export const msBrowser = ["Edge","IE"].indexOf(browser) > -1
+
+interface ActionControls {
+	[key:string]: ()=>void
+}
 
 const VIDEO_MARGINS = {
 	"edge": {
@@ -25,34 +31,41 @@ const VIDEO_MARGINS = {
 const margins = browser == "Chrome" ? VIDEO_MARGINS["chrome"] : VIDEO_MARGINS["edge"]
 
 export interface Display {
-	id:number,
-	file:File,
-	url:string,
-	startTime?:number,
-	in?:number,
-	out?:number,
-	video?:HTMLVideoElement,
-	triggerResize:boolean,
+	id:number
+	file:File
+	url:string
+	startTime?:number
+	in?:number
+	out?:number
+	video?:HTMLVideoElement
+	triggerResize:boolean
 	playbackRate:number
 }
 
 interface BDVideoProps {
-	display:Display,
-	objectFit:ObjectFit,
+	display:Display
+	objectFit:ObjectFit
 	size: {
-		width:number,
+		width:number
 		height:number
-	},
-	showOverlay:boolean,
-	showThumbnail:boolean,
-	inTime?:number,
-	outTime?:number,
-	playbackRate:number,
-	onMouseOver:()=>void,
-	onMouseOut:()=>void,
+	}
+	showOverlay:boolean
+	showThumbnail:boolean
+	inTime?:number
+	outTime?:number
+	playbackRate:number
+	onMouseOver:()=>void
+	onMouseOut:()=>void
 	onLoad:()=>void
 	onError:()=>void
 	onDrag:(display:Display)=>void
+	removeCallback:()=>void,
+	copyCallback:()=>void,
+	exclusiveCallback:()=>void,
+	staggerCallback:()=>void,
+	inCallback:()=>void,
+	outCallback:()=>void,
+	speedCallback:(adjustment:number)=>void
 }
 
 interface BDVideoState {
@@ -73,7 +86,6 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 	constructor(props:BDVideoProps) {
 		super(props)
 		this.state = {}
-		this.hoverThumbnail = this.hoverThumbnail.bind(this)
 	}
 
 	setIO() {
@@ -86,7 +98,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		}
 	}
 
-	hoverThumbnail(e:MouseEvent) {
+	hoverThumbnail = (e:MouseEvent) => {
 		const video = this.video.current
 		if (!video) return
 		const distanceFromBottom = video.height - e.layerY
@@ -172,12 +184,61 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		}
 	}
 
+	adjustDisplayTime(adjustment:number, percentage:boolean = false) {
+		const video = this.video.current!
+		const end = video.duration
+		if (percentage) {
+			adjustment = end * adjustment
+		}
+		const diff = end - video.currentTime
+		if (adjustment > diff) {
+			video.currentTime = adjustment - diff
+		} else {
+			video.currentTime = video.currentTime + adjustment
+		}
+	}
+
 	render() {
-		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, showThumbnail, playbackRate} = this.props
+		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, showThumbnail, playbackRate,
+			removeCallback, copyCallback, exclusiveCallback, inCallback, outCallback, speedCallback} = this.props
 		const {thumbnailState} = this.state
 
-		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut}>
-			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: msBrowser ? 'none' : 'auto'}}>{showOverlay && `${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}</div>
+		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut} onKeyDown={ev => {
+			const video = this.video.current!
+			const key = ev.key.toLowerCase()
+			if (ev.shiftKey) {
+				const shiftDisplayActions = {
+					"arrowleft": () => this.adjustDisplayTime(-.1, true),
+					"arrowright": () => this.adjustDisplayTime(.1, true),
+					"f": () => fullscreenElement(video)
+				} as ActionControls
+				key in shiftDisplayActions && shiftDisplayActions[key]()
+			} else if (ev.ctrlKey) {
+				const ctrlDisplayActions = {
+				} as ActionControls
+				key in ctrlDisplayActions && ctrlDisplayActions[key]()
+			} else {
+				const displayActions = {
+					"m": () => video.muted = !video.muted,
+					"arrowleft": () => this.adjustDisplayTime(-60),
+					"arrowright": () => this.adjustDisplayTime(60),
+				} as ActionControls
+				key in displayActions && displayActions[key]()
+			}
+			console.log(key)
+		}}>
+			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: msBrowser ? 'none' : 'auto'}}>
+				{`${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}
+			</div>
+			<div className="display-controls">
+				<button onClick={removeCallback}>X</button>
+				<button onClick={() => copyCallback()}>C</button>
+				<button onClick={exclusiveCallback}>E</button>
+				<button onClick={inCallback}>I</button>
+				<button onClick={outCallback}>O</button>
+				<button onClick={() => speedCallback(2)}>&raquo;</button>
+				<button onClick={() => speedCallback(0.5)}>&laquo;</button>
+			</div>
 			{showOverlay && this.getIO()}
 			{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnailState.offsetX}} />}
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
