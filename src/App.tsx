@@ -5,10 +5,14 @@ import '@babel/polyfill'
 import React from 'react'
 import './App.css'
 import { BDVideo, Display } from './BDVideo'
-import { ObjectFit, OBJECT_FITS } from './ObjectFit'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
 import Help from './Help'
 import { toggleFullscreen } from './FullScreen'
+import { ObjectFitProperty } from "csstype"
+
+export const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFitProperty[]
+
+const avg = (arr:number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
 
 // TODO: refence react as third party library on cdn?
 
@@ -42,7 +46,7 @@ interface AppState {
 	ratioIndex:number,
 	aspectRatio:AspectRatio,
 	objectFitIndex:number,
-	objectFit:ObjectFit,
+	objectFit:ObjectFitProperty,
 	firstBatch:boolean,
 	errorDisplays:Display[],
 	dragSrc?:Display
@@ -129,73 +133,76 @@ class App extends React.Component<{},AppState> {
 		// }
 		// this.state = Object.assign({}, this.state, testState)
 
-		window.onresize = () => this.updateDimensions()
+		window.onresize = this.updateDimensions
 
-		window.onkeydown = ev => {
-			const key = ev.key.toLowerCase()
-			if (key in this.globalActions && !ev.shiftKey && !ev.ctrlKey) {
-				this.globalActions[key]()
-				return
-			}
-
-			const {activeDisplay} = this.state
-			if (!activeDisplay) return
-
-			if (ev.shiftKey) {
-				const shiftDisplayActions = {
-					"s": () => this.syncPlaybackRates(activeDisplay.playbackRate),
-				} as ActionControls
-				key in shiftDisplayActions && shiftDisplayActions[key]()
-			} else if (ev.ctrlKey) {
-				const ctrlDisplayActions = {
-					"arrowleft": () => this.adjustVideoSpeed(activeDisplay, 0.5),
-					"arrowright": () => this.adjustVideoSpeed(activeDisplay, 2)
-				} as ActionControls
-				key in ctrlDisplayActions && ctrlDisplayActions[key]()
-			} else {
-				const displayActions = {
-					"delete": () => this.deleteDisplay(activeDisplay),
-					"c": () => this.addDisplayCopy(activeDisplay),
-					"d": () => this.distributeTimes(activeDisplay),
-					"e": () => this.setState({displays: [activeDisplay,]}),
-					"i": () => this.setVideoIO(activeDisplay, "in"),
-					"o": () => this.setVideoIO(activeDisplay, "out"),
-					"r": () => this.deleteDisplay(activeDisplay),
-				} as ActionControls
-				key in displayActions && displayActions[key]()
-				if (key >= "2" && key <= "9") {
-					this.fillGrid(activeDisplay, parseInt(key))
-					this.distributeTimes(activeDisplay)
-				}
-			}
-		}
+		window.onkeydown = this.handleKeyPress
 
 		document.ondragover = stopDragDrop
 		document.ondragenter = stopDragDrop
 		document.ondragleave = stopDragDrop
+		document.ondrop = this.handleDropEvent
+	}
 
-		document.ondrop = (e:DragEvent) => {
-			stopDragDrop(e)
-			if (!e.dataTransfer) return
-			const {firstBatch} = this.state
-			const droppedFiles = e.dataTransfer.files as FileList
-			const videoFiles = Array.from(droppedFiles).filter(i => i.type.startsWith('video/'))
-			let maxId = this.state.maxId
-			const newDisplays = videoFiles.map(file => ({
-				id: ++maxId,
-				file,
-				url: URL.createObjectURL(file),
-				triggerResize: firstBatch,
-				playbackRate: 1
-			} as Display))
+	handleDropEvent = (e:DragEvent) => {
+		stopDragDrop(e)
+		if (!e.dataTransfer) return
+		const {firstBatch} = this.state
+		const droppedFiles = e.dataTransfer.files as FileList
+		const videoFiles = Array.from(droppedFiles).filter(i => i.type.startsWith('video/'))
+		let maxId = this.state.maxId
+		const newDisplays = videoFiles.map(file => ({
+			id: ++maxId,
+			file,
+			url: URL.createObjectURL(file),
+			triggerResize: firstBatch,
+			playbackRate: 1
+		} as Display))
 
-			this.setState({
-				displays: this.state.displays.concat(newDisplays),
-				maxId,
-				firstBatch: false,
-				// hide help if we are adding videos
-				showHelp: this.state.showHelp && videoFiles.length == 0
-			})
+		this.setState({
+			displays: this.state.displays.concat(newDisplays),
+			maxId,
+			firstBatch: false,
+			// hide help if we are adding videos
+			showHelp: this.state.showHelp && videoFiles.length == 0
+		})
+	}
+
+	handleKeyPress = (ev:KeyboardEvent) => {
+		const key = ev.key.toLowerCase()
+		if (key in this.globalActions && !ev.shiftKey && !ev.ctrlKey) {
+			this.globalActions[key]()
+			return
+		}
+
+		const d = this.state.activeDisplay
+		if (!d) return
+
+		if (ev.shiftKey) {
+			const shiftDisplayActions = {
+				"s": () => this.syncPlaybackRates(d.playbackRate),
+			} as ActionControls
+			key in shiftDisplayActions && shiftDisplayActions[key]()
+		} else if (ev.ctrlKey) {
+			const ctrlDisplayActions = {
+				"arrowleft": () => this.adjustVideoSpeed(d, 0.5),
+				"arrowright": () => this.adjustVideoSpeed(d, 2)
+			} as ActionControls
+			key in ctrlDisplayActions && ctrlDisplayActions[key]()
+		} else {
+			const displayActions = {
+				"delete": () => this.deleteDisplay(d),
+				"c": () => this.addDisplayCopy(d),
+				"d": () => this.distributeTimes(d),
+				"e": () => this.setState({displays: [d]}),
+				"i": () => this.setVideoIO(d, "in"),
+				"o": () => this.setVideoIO(d, "out"),
+				"r": () => this.deleteDisplay(d),
+			} as ActionControls
+			key in displayActions && displayActions[key]()
+			if (key >= "2" && key <= "9") {
+				this.fillGrid(d, parseInt(key))
+				this.distributeTimes(d)
+			}
 		}
 	}
 
@@ -248,7 +255,7 @@ class App extends React.Component<{},AppState> {
 		this.setState({displays: this.state.displays})
 	}
 
-	updateDimensions() {
+	updateDimensions = () => {
 		const vp = this.viewport.current!
 		const viewport = {x: vp.clientWidth, y: vp.clientHeight}
 		this.setState({viewport})
@@ -281,6 +288,7 @@ class App extends React.Component<{},AppState> {
 	deleteDisplay(display:Display) {
 		this.setState({ displays: this.state.displays.filter(i => i != display) })
 	}
+	applyOnActive = (func:(display:Display)=>void) => () => this.state.activeDisplay && func.bind(this)(this.state.activeDisplay)
 
 	nextDimensionRatio() {
 		let i = this.state.ratioIndex + 1
@@ -304,14 +312,10 @@ class App extends React.Component<{},AppState> {
 		this.updateDimensions()
 	}
 
-	getAspectRatios() {
-		return this.state.displays.map(i => i.video!.videoWidth / i.video!.videoHeight)
-	}
-
 	getRecommendedAspectRatioIndex() {
-		const avgRatio = this.getAspectRatios().reduce((a,b) => a + b, 0) / this.state.displays.length
-		const closestRatio = [...ASPECT_RATIOS].sort((a, b) => Math.min(a.ratio / avgRatio, avgRatio / a.ratio) - Math.min(b.ratio/avgRatio, avgRatio / b.ratio)).pop()
-		const i = ASPECT_RATIOS.findIndex(i => i.name == closestRatio!.name)
+		const avgRatio = avg(this.state.displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
+		const closestRatio = [...ASPECT_RATIOS].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
+		const i = ASPECT_RATIOS.findIndex(i => i.name == closestRatio.name)
 		return i
 	}
 
@@ -360,7 +364,8 @@ class App extends React.Component<{},AppState> {
 					onLoad={() => i.triggerResize && this.setRecommendedAspectRatio()}
 					onError={() => this.handleVideoError(i)}
 					inTime={i.in} outTime={i.out}
-					removeCallback={() => this.deleteDisplay(i)}
+					// removeCallback={() => this.deleteDisplay(i)}
+					removeCallback={this.applyOnActive(this.deleteDisplay)}
 					copyCallback={() => this.addDisplayCopy(i)}
 					exclusiveCallback={() => this.setState({displays: [i]})}
 					staggerCallback={() => this.distributeTimes(i)}

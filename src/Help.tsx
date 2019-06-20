@@ -1,6 +1,7 @@
 import React from 'react'
 import './Help.css'
-import {ObjectFit, OBJECT_FITS} from './ObjectFit'
+import { ObjectFitProperty } from "csstype"
+import {OBJECT_FITS} from './App'
 import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
 
 const SHORTCUTS = <section id="shortcuts">
@@ -34,8 +35,8 @@ const DISCLAIMER = <footer>
 </footer>
 
 interface HelpSettingsProps {
-	objectFit:ObjectFit,
-	objectFitCallback:(objectFit:ObjectFit)=>void,
+	objectFit:ObjectFitProperty,
+	objectFitCallback:(objectFit:ObjectFitProperty)=>void,
 	aspectRatio:AspectRatio,
 	aspectRatioCallback:(aspectRatio:AspectRatio)=>void
 }
@@ -54,7 +55,7 @@ export function Help(props:HelpSettingsProps) {
 				<SelectInput
 					name="objectScale" label="Video Fit/Fill"
 					value={props.objectFit} choices={OBJECT_FITS.map((v, i) => <option key={i} value={v}>{v[0].toUpperCase()+v.substr(1)}</option>)}
-					callback={i => props.objectFitCallback(i as ObjectFit)} /><br />
+					callback={i => props.objectFitCallback(i as ObjectFitProperty)} /><br />
 				<SelectInput
 					name="aspectRatio" label="Aspect Ratio"
 					value={ASPECT_RATIOS.indexOf(props.aspectRatio).toString()}

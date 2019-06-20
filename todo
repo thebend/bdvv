@@ -45,3 +45,5 @@ o splash page:
  - scour video game screen capture or TV episode to find highlights
  - scour suveillance video footage
 - Have some settings save in client?
+- Fix occasional glitches from drag/drop
+- is my "applyOnActive" function a good idea?  An antipattern?

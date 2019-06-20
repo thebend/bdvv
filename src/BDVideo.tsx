@@ -1,7 +1,7 @@
 import React from 'react'
-import {ObjectFit} from './ObjectFit'
 import './BDVideo.css'
 import { fullscreenElement } from './FullScreen'
+import { ObjectFitProperty } from 'csstype'
 
 function getBrowser() {
 	if (navigator.userAgent.indexOf(' Trident/') > -1) return 'IE'
@@ -44,7 +44,7 @@ export interface Display {
 
 interface BDVideoProps {
 	display:Display
-	objectFit:ObjectFit
+	objectFit:ObjectFitProperty
 	size: {
 		width:number
 		height:number
