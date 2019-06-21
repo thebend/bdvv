@@ -288,7 +288,6 @@ class App extends React.Component<{},AppState> {
 	deleteDisplay(display:Display) {
 		this.setState({ displays: this.state.displays.filter(i => i != display) })
 	}
-	applyOnActive = (func:(display:Display)=>void) => () => this.state.activeDisplay && func.bind(this)(this.state.activeDisplay)
 
 	nextDimensionRatio() {
 		let i = this.state.ratioIndex + 1
@@ -348,7 +347,7 @@ class App extends React.Component<{},AppState> {
 	}
 
 	render() {
-		const {displays, errorDisplays, activeDisplay, lastDisplay, showThumbnails, showHelp, aspectRatio, objectFit} = this.state
+		const {displays, errorDisplays, activeDisplay, showThumbnails, showHelp, aspectRatio, objectFit} = this.state
 		const size = this.getVideoSize()
 		return <>
 			<main ref={this.viewport}
@@ -364,8 +363,7 @@ class App extends React.Component<{},AppState> {
 					onLoad={() => i.triggerResize && this.setRecommendedAspectRatio()}
 					onError={() => this.handleVideoError(i)}
 					inTime={i.in} outTime={i.out}
-					// removeCallback={() => this.deleteDisplay(i)}
-					removeCallback={this.applyOnActive(this.deleteDisplay)}
+					removeCallback={() => this.deleteDisplay(i)}
 					copyCallback={() => this.addDisplayCopy(i)}
 					exclusiveCallback={() => this.setState({displays: [i]})}
 					staggerCallback={() => this.distributeTimes(i)}

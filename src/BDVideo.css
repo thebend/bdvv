@@ -35,6 +35,9 @@
 	font-size: 1.3em;
 	font-weight: bold;
 	font-family: Consolas, monospace;
+	cursor: pointer;
+	background-color: #ddd;
+	border: 1px solid #999;
 }
 .display-controls button:first-child {
 	border-radius: 0.3em 0.3em 0 0;

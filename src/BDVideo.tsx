@@ -54,6 +54,7 @@ interface BDVideoProps {
 	inTime?:number
 	outTime?:number
 	playbackRate:number
+	overlayDuration?:number
 	onMouseOver:()=>void
 	onMouseOut:()=>void
 	onLoad:()=>void
@@ -70,9 +71,10 @@ interface BDVideoProps {
 
 interface BDVideoState {
 	thumbnailState?:{
-		offsetX:number,
+		offsetX:number
 		timestamp:number
 	}
+	overlayTimeout?:NodeJS.Timeout
 }
 
 export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
@@ -139,6 +141,12 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		}
 	}
 
+	hideTimeout = () => {
+		this.setState({
+			overlayTimeout: undefined
+		})
+	}
+
 	componentDidMount() {
 		const {display, onLoad, onError, onDrag, showThumbnail} = this.props
 		const video = this.video.current!
@@ -159,7 +167,15 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 			}
 			onDrag(display)
 		}
-		video.onmousemove = showThumbnail && browser != 'IE' ? this.hoverThumbnail : null
+		video.onmousemove = e => {
+			showThumbnail && browser != 'IE' && this.hoverThumbnail(e)
+			const {overlayDuration} = this.props
+			const {overlayTimeout} = this.state
+			overlayTimeout && clearTimeout(overlayTimeout)
+			this.setState({
+				overlayTimeout: setTimeout(this.hideTimeout, overlayDuration || 3000)
+			})
+		}
 		video.onmouseout = e => {
 			this.setState({thumbnailState: undefined})
 		}
@@ -201,7 +217,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 	render() {
 		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, showThumbnail, playbackRate,
 			removeCallback, copyCallback, exclusiveCallback, inCallback, outCallback, speedCallback} = this.props
-		const {thumbnailState} = this.state
+		const {thumbnailState, overlayTimeout} = this.state
 
 		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut} onKeyDown={ev => {
 			const video = this.video.current!
@@ -227,10 +243,10 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 			}
 			console.log(key)
 		}}>
-			<div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: msBrowser ? 'none' : 'auto'}}>
+			{overlayTimeout && <div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: msBrowser ? 'none' : 'auto'}}>
 				{`${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}
-			</div>
-			<div className="display-controls">
+			</div>}
+			{overlayTimeout && <div className="display-controls">
 				<button onClick={removeCallback}>X</button>
 				<button onClick={() => copyCallback()}>C</button>
 				<button onClick={exclusiveCallback}>E</button>
@@ -238,7 +254,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 				<button onClick={outCallback}>O</button>
 				<button onClick={() => speedCallback(2)}>&raquo;</button>
 				<button onClick={() => speedCallback(0.5)}>&laquo;</button>
-			</div>
+			</div>}
 			{showOverlay && this.getIO()}
 			{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnailState.offsetX}} />}
 			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
