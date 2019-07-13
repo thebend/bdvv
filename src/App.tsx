@@ -148,7 +148,8 @@ class App extends React.Component<{},AppState> {
 		if (!e.dataTransfer) return
 		const {firstBatch} = this.state
 		const droppedFiles = e.dataTransfer.files as FileList
-		const videoFiles = Array.from(droppedFiles).filter(i => i.type.startsWith('video/'))
+		// const videoFiles = Array.from(droppedFiles).filter(i => i.type.startsWith('video/'))
+		const videoFiles = Array.from(droppedFiles)
 		let maxId = this.state.maxId
 		const newDisplays = videoFiles.map(file => ({
 			id: ++maxId,
