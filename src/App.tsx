@@ -1,6 +1,6 @@
 // TODO: import only required polyfills
 // import 'react-app-polyfill/ie11'
-import '@babel/polyfill'
+// import '@babel/polyfill'
 // import 'core-js/modules/es6.array.from'
 import React from 'react'
 import './App.css'
@@ -74,7 +74,7 @@ class App extends React.Component<{},AppState> {
 
 	distributeTimes(display:Display) {
 		const {displays} = this.state
-		const matchingDisplays = displays.filter(i => i.file == display.file)
+		const matchingDisplays = displays.filter(i => i.file === display.file)
 		const di = matchingDisplays.indexOf(display)
 		// start with target display so it keeps its current time, bump up from there looping back to start
 		const orderedDisplays = [display, ...matchingDisplays.slice(di+1), ...matchingDisplays.slice(0, di)]
@@ -164,7 +164,7 @@ class App extends React.Component<{},AppState> {
 			maxId,
 			firstBatch: false,
 			// hide help if we are adding videos
-			showHelp: this.state.showHelp && videoFiles.length == 0
+			showHelp: this.state.showHelp && videoFiles.length === 0
 		})
 	}
 
@@ -235,7 +235,8 @@ class App extends React.Component<{},AppState> {
 			if (videoArea < bestArea) continue
 			// otherwise save this as best situation
 			bestArea = videoArea
-			width = x, height = y
+			width = x
+			height = y
 		}
 
 		return {width, height}
@@ -287,7 +288,7 @@ class App extends React.Component<{},AppState> {
 	}
 
 	deleteDisplay(display:Display) {
-		this.setState({ displays: this.state.displays.filter(i => i != display) })
+		this.setState({ displays: this.state.displays.filter(i => i !== display) })
 	}
 
 	nextDimensionRatio() {
@@ -315,7 +316,7 @@ class App extends React.Component<{},AppState> {
 	getRecommendedAspectRatioIndex() {
 		const avgRatio = avg(this.state.displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
 		const closestRatio = [...ASPECT_RATIOS].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
-		const i = ASPECT_RATIOS.findIndex(i => i.name == closestRatio.name)
+		const i = ASPECT_RATIOS.findIndex(i => i.name === closestRatio.name)
 		return i
 	}
 
@@ -331,7 +332,7 @@ class App extends React.Component<{},AppState> {
 		const {displays, errorDisplays} = this.state
 		errorDisplays.push(display)
 		this.setState({
-			displays: displays.filter(i => i != display),
+			displays: displays.filter(i => i !== display),
 			errorDisplays
 		})
 	}
@@ -339,7 +340,7 @@ class App extends React.Component<{},AppState> {
 	reorderDisplays(dest:EventTarget) {
 		const {displays, dragSrc} = this.state
 		if (!dragSrc) return
-		const destDisplay = displays.filter(i => i.video == dest).pop() || displays[displays.length-1]
+		const destDisplay = displays.filter(i => i.video === dest).pop() || displays[displays.length-1]
 		const si = displays.indexOf(dragSrc)
 		const tmpDisplays = [...displays.slice(0, si), ...displays.slice(si+1)]
 		const di = tmpDisplays.indexOf(destDisplay)
@@ -353,9 +354,9 @@ class App extends React.Component<{},AppState> {
 		return <>
 			<main ref={this.viewport}
 				onDrop={e => this.reorderDisplays(e.target)}>
-				{displays.length == 0 && SPLASH}
+				{displays.length === 0 && SPLASH}
 				{displays.map(i => <BDVideo size={size} objectFit={objectFit} key={i.id} display={i}
-					showOverlay={i == activeDisplay}
+					showOverlay={i === activeDisplay}
 					showThumbnail={showThumbnails}
 					playbackRate={i.playbackRate}
 					onDrag={display => this.setState({dragSrc: display})}

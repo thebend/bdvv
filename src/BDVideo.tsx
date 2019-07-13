@@ -28,7 +28,7 @@ const VIDEO_MARGINS = {
 		"bottom": 16
 	}
 }
-const margins = browser == "Chrome" ? VIDEO_MARGINS["chrome"] : VIDEO_MARGINS["edge"]
+const margins = browser === "Chrome" ? VIDEO_MARGINS["chrome"] : VIDEO_MARGINS["edge"]
 
 export interface Display {
 	id:number
@@ -129,7 +129,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 		const rate = playbackRate || 1
 		video.playbackRate = rate
 		this.setIO()
-		if (showThumbnail && browser != 'IE') {
+		if (showThumbnail && browser !== 'IE') {
 			const {thumbnailState} = this.state
 			const thumbnail = this.thumbnail.current
 			if (thumbnail && thumbnailState) {
@@ -168,7 +168,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 			onDrag(display)
 		}
 		video.onmousemove = e => {
-			showThumbnail && browser != 'IE' && this.hoverThumbnail(e)
+			showThumbnail && browser !== 'IE' && this.hoverThumbnail(e)
 			const {overlayDuration} = this.props
 			const {overlayTimeout} = this.state
 			overlayTimeout && clearTimeout(overlayTimeout)
@@ -244,7 +244,7 @@ export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
 			console.log(key)
 		}}>
 			{overlayTimeout && <div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: msBrowser ? 'none' : 'auto'}}>
-				{`${display.file.name}${playbackRate == 1 ? "" : " ("+playbackRate+"x)"}`}
+				{`${display.file.name}${playbackRate === 1 ? "" : " ("+playbackRate+"x)"}`}
 			</div>}
 			{overlayTimeout && <div className="display-controls">
 				<button onClick={removeCallback}>X</button>

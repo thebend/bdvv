@@ -41,9 +41,7 @@ interface HelpSettingsProps {
 	aspectRatioCallback:(aspectRatio:AspectRatio)=>void
 }
 
-function getAR(aspectRatio:AspectRatio) {
-	return `${aspectRatio.ratio.toFixed(2)} / ${aspectRatio.name}`
-}
+// const getAR = (v:AspectRatio) => `${v.ratio.toFixed(2)} / ${v.name}`
 
 export function Help(props:HelpSettingsProps) {
 	return <section id="help">
@@ -77,11 +75,15 @@ function SelectInput(props:{name:string, label:string, value:string, choices:JSX
 	</>
 }
 
-function NumInput(props:{value:number, name:string, label:string, callback:(num:number)=>void}) {
-	return <>
-		<label htmlFor={props.name}>{props.label}</label>
-		<input type="number" min={0} maxLength={3} name={props.name} value={props.value} onChange={e => props.callback(parseFloat(e.target.value))} />
-	</>
+type NumInputProps = {
+	value:number
+	name:string
+	label:string
+	callback:(num:number)=>void
 }
+const NumInput = ({value,name,label,callback}:NumInputProps) => <>
+	<label htmlFor={name}>{label}</label>
+	<input type="number" min={0} maxLength={3} name={name} value={value} onChange={e => callback(parseFloat(e.target.value))} />
+</>
 
 export default Help
