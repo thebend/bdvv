@@ -2,7 +2,8 @@ import React from 'react'
 import './Help.css'
 import { ObjectFitProperty } from "csstype"
 import {OBJECT_FITS} from './App'
-import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
+import AspectRatios from './AspectRatios.json'
+type AspectRatio = typeof AspectRatios[number]
 
 const SHORTCUTS = <section id="shortcuts">
 	<h2>Shortcuts</h2><ol>
@@ -34,10 +35,10 @@ const DISCLAIMER = <footer>
 	<p>This tool records <b>no</b> filenames, screen grabs, or any other methods of identifying the actual contents of any video.  Only metadata about a video's format (codec, file size, resolution, and duration) may be recorded.</p>
 </footer>
 
-interface HelpSettingsProps {
-	objectFit:ObjectFitProperty,
-	objectFitCallback:(objectFit:ObjectFitProperty)=>void,
-	aspectRatio:AspectRatio,
+type HelpSettingsProps = {
+	objectFit:ObjectFitProperty
+	objectFitCallback:(objectFit:ObjectFitProperty)=>void
+	aspectRatio:AspectRatio
 	aspectRatioCallback:(aspectRatio:AspectRatio)=>void
 }
 
@@ -56,9 +57,9 @@ export function Help(props:HelpSettingsProps) {
 					callback={i => props.objectFitCallback(i as ObjectFitProperty)} /><br />
 				<SelectInput
 					name="aspectRatio" label="Aspect Ratio"
-					value={ASPECT_RATIOS.indexOf(props.aspectRatio).toString()}
-					choices={ASPECT_RATIOS.map((v, i) => <option key={i} value={i}>{v.name}</option>)}
-					callback={i => props.aspectRatioCallback(ASPECT_RATIOS[parseInt(i)])} /><br />
+					value={AspectRatios.indexOf(props.aspectRatio).toString()}
+					choices={AspectRatios.map((v, i) => <option key={i} value={i}>{v.name}</option>)}
+					callback={i => props.aspectRatioCallback(AspectRatios[parseInt(i)])} /><br />
 			</form>
 		</section>
 		{SHORTCUTS}
@@ -75,15 +76,15 @@ function SelectInput(props:{name:string, label:string, value:string, choices:JSX
 	</>
 }
 
-type NumInputProps = {
-	value:number
-	name:string
-	label:string
-	callback:(num:number)=>void
-}
-const NumInput = ({value,name,label,callback}:NumInputProps) => <>
-	<label htmlFor={name}>{label}</label>
-	<input type="number" min={0} maxLength={3} name={name} value={value} onChange={e => callback(parseFloat(e.target.value))} />
-</>
+// type NumInputProps = {
+// 	value:number
+// 	name:string
+// 	label:string
+// 	callback:(num:number)=>void
+// }
+// const NumInput = ({value,name,label,callback}:NumInputProps) => <>
+// 	<label htmlFor={name}>{label}</label>
+// 	<input type="number" min={0} maxLength={3} name={name} value={value} onChange={e => callback(parseFloat(e.target.value))} />
+// </>
 
 export default Help

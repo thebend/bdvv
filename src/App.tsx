@@ -3,12 +3,14 @@
 // import '@babel/polyfill'
 // import 'core-js/modules/es6.array.from'
 import React from 'react'
+import { ObjectFitProperty } from "csstype"
 import './App.css'
 import { BDVideo, Display } from './BDVideo'
-import {AspectRatio, ASPECT_RATIOS} from './AspectRatio'
 import Help from './Help'
 import { toggleFullscreen } from './FullScreen'
-import { ObjectFitProperty } from "csstype"
+import AspectRatios from './AspectRatios.json'
+
+type AspectRatioType = typeof AspectRatios[number]
 
 export const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFitProperty[]
 
@@ -25,13 +27,13 @@ const SPLASH = <section id="splash">
 	<img src="clipart/television.jpg" alt="Television" /> */}
 </section>
 
-function stopDragDrop(e:Event) {
+function stopEvent(e:Event) {
 	e.preventDefault()
 	e.stopPropagation()
 }
 
-interface Dimensions {
-	x:number,
+type Dimensions = {
+	x:number
 	y:number
 }
 
@@ -44,7 +46,7 @@ interface AppState {
 	lastDisplay?:Display,
 	viewport?:Dimensions,
 	ratioIndex:number,
-	aspectRatio:AspectRatio,
+	aspectRatio:AspectRatioType,
 	objectFitIndex:number,
 	objectFit:ObjectFitProperty,
 	firstBatch:boolean,
@@ -52,8 +54,8 @@ interface AppState {
 	dragSrc?:Display
 }
 
-interface ActionControls {
-	[key:string]: ()=>void
+type ActionControls = {
+	[key:string]:()=>void
 }
 
 class App extends React.Component<{},AppState> {
@@ -65,6 +67,19 @@ class App extends React.Component<{},AppState> {
 		"t": () => this.setState({showThumbnails: !this.state.showThumbnails}),
 		"x": () => this.nextDimensionRatio()
 	} as ActionControls
+
+	state:AppState = {
+		showHelp: true,
+		showThumbnails: true,
+		displays: [],
+		maxId: 0,
+		ratioIndex: 0,
+		aspectRatio: AspectRatios[0],
+		objectFitIndex: 0,
+		objectFit: OBJECT_FITS[0],
+		firstBatch: true,
+		errorDisplays: [],
+	}
 
 	syncPlaybackRates(playbackRate:number) {
 		const {displays} = this.state
@@ -104,47 +119,8 @@ class App extends React.Component<{},AppState> {
 		})
 	}
 
-	constructor(props:{}) {
-		super(props)
-		this.state = {
-			showHelp: true,
-			showThumbnails: true,
-			displays: [],
-			maxId: 0,
-			ratioIndex: 0,
-			aspectRatio: ASPECT_RATIOS[0],
-			objectFitIndex: 0,
-			objectFit: OBJECT_FITS[0],
-			firstBatch: true,
-			errorDisplays: [],
-		}
-
-		// const testState = {
-		// 	displays: [{
-		// 		id: 1,
-		// 		file: new File([], "test"),
-		// 		url: "2.mp4",
-		// 		triggerResize: true,
-		// 		playbackRate: 1
-		// 	}],
-		// 	maxId: 1,
-		// 	firstBatch: false,
-		// 	showHelp: false
-		// }
-		// this.state = Object.assign({}, this.state, testState)
-
-		window.onresize = this.updateDimensions
-
-		window.onkeydown = this.handleKeyPress
-
-		document.ondragover = stopDragDrop
-		document.ondragenter = stopDragDrop
-		document.ondragleave = stopDragDrop
-		document.ondrop = this.handleDropEvent
-	}
-
 	handleDropEvent = (e:DragEvent) => {
-		stopDragDrop(e)
+		stopEvent(e)
 		if (!e.dataTransfer) return
 		const {firstBatch} = this.state
 		const droppedFiles = e.dataTransfer.files as FileList
@@ -293,10 +269,10 @@ class App extends React.Component<{},AppState> {
 
 	nextDimensionRatio() {
 		let i = this.state.ratioIndex + 1
-		if (i >= ASPECT_RATIOS.length) i = 0
+		if (i >= AspectRatios.length) i = 0
 		this.setState({
 			ratioIndex: i,
-			aspectRatio: ASPECT_RATIOS[i]
+			aspectRatio: AspectRatios[i]
 		})
 	}
 
@@ -311,19 +287,27 @@ class App extends React.Component<{},AppState> {
 
 	componentDidMount() {
 		this.updateDimensions()
+		window.onresize = this.updateDimensions
+
+		window.onkeydown = this.handleKeyPress
+
+		document.ondragover = stopEvent
+		document.ondragenter = stopEvent
+		document.ondragleave = stopEvent
+		document.ondrop = this.handleDropEvent
 	}
 
 	getRecommendedAspectRatioIndex() {
 		const avgRatio = avg(this.state.displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
-		const closestRatio = [...ASPECT_RATIOS].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
-		const i = ASPECT_RATIOS.findIndex(i => i.name === closestRatio.name)
+		const closestRatio = [...AspectRatios].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
+		const i = AspectRatios.findIndex(i => i.name === closestRatio.name)
 		return i
 	}
 
 	setRecommendedAspectRatio() {
 		const i = this.getRecommendedAspectRatioIndex()
 		this.setState({
-			aspectRatio: ASPECT_RATIOS[i],
+			aspectRatio: AspectRatios[i],
 			ratioIndex: i
 		})
 	}
@@ -383,8 +367,8 @@ class App extends React.Component<{},AppState> {
 	}
 }
 
-interface ErrorDisplayProps {
-	errorDisplays:Display[],
+type ErrorDisplayProps = {
+	errorDisplays:Display[]
 	dismissCallback:()=>void
 }
 function ErrorDisplay({errorDisplays, dismissCallback}:ErrorDisplayProps) {

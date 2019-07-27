@@ -1,7 +1,7 @@
 import React from 'react'
-import './BDVideo.css'
 import { fullscreenElement } from './FullScreen'
 import { ObjectFitProperty } from 'csstype'
+import './BDVideo.css'
 
 function getBrowser() {
 	if (navigator.userAgent.indexOf(' Trident/') > -1) return 'IE'
@@ -12,7 +12,7 @@ function getBrowser() {
 export const browser = getBrowser()
 export const msBrowser = ["Edge","IE"].indexOf(browser) > -1
 
-interface ActionControls {
+type ActionControls = {
 	[key:string]: ()=>void
 }
 
@@ -30,7 +30,7 @@ const VIDEO_MARGINS = {
 }
 const margins = browser === "Chrome" ? VIDEO_MARGINS["chrome"] : VIDEO_MARGINS["edge"]
 
-export interface Display {
+export type Display = {
 	id:number
 	file:File
 	url:string
@@ -42,7 +42,7 @@ export interface Display {
 	playbackRate:number
 }
 
-interface BDVideoProps {
+type BDVideoProps = {
 	display:Display
 	objectFit:ObjectFitProperty
 	size: {
@@ -69,204 +69,181 @@ interface BDVideoProps {
 	speedCallback:(adjustment:number)=>void
 }
 
-interface BDVideoState {
-	thumbnailState?:{
-		offsetX:number
-		timestamp:number
-	}
-	overlayTimeout?:NodeJS.Timeout
+type ThumbnailState = {
+	offsetX:number
+	timestamp:number
 }
 
-export class BDVideo extends React.Component<BDVideoProps, BDVideoState> {
-	video = React.createRef<HTMLVideoElement>()
-	thumbnail = React.createRef<HTMLVideoElement>()
+export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
+	onLoad, onError, onDrag, overlayDuration=3000, size, onMouseOver, onMouseOut,
+	objectFit, showOverlay, removeCallback, copyCallback, exclusiveCallback,
+	inCallback, outCallback, speedCallback}:BDVideoProps) {
 
-	dragMargin = 80
-	thumbnailWidth = 196
-	thumbnailMargin = margins.bottom + 8
+	const [v, setV] = React.useState<HTMLVideoElement>()
+	const vRef = React.useCallback((node:HTMLVideoElement) => {
+		setV(node)
+	}, [])
 
-	constructor(props:BDVideoProps) {
-		super(props)
-		this.state = {}
-	}
+	const thumbnail = React.useRef<HTMLVideoElement>(null)
+	// TODO: set these to null instead of starting and allowing undefined?
+	const [overlayTimeout, setOverlayTimeout] = React.useState<NodeJS.Timeout|undefined>()
+	const [thumbnailState, setThumbnailState] = React.useState<ThumbnailState|undefined>()
 
-	setIO() {
-		const {inTime, outTime} = this.props
-		const video = this.video.current!
-		video.ontimeupdate = e => {
-			const pastOut = outTime && outTime < video.currentTime
-			const beforeIn = inTime && inTime > video.currentTime
-			if (pastOut || beforeIn) video.currentTime = inTime || 0
+	const dragMargin = 80
+	const thumbnailWidth = 196
+	const thumbnailMargin = margins.bottom + 8
+
+	React.useEffect(() => {
+		if (!v) return
+		v.ontimeupdate = e => {
+			const pastOut = outTime && outTime < v.currentTime
+			const beforeIn = inTime && inTime > v.currentTime
+			if (pastOut || beforeIn) v.currentTime = inTime || 0
 		}
-	}
+	}, [inTime, outTime, v])
 
-	hoverThumbnail = (e:MouseEvent) => {
-		const video = this.video.current
-		if (!video) return
-		const distanceFromBottom = video.height - e.layerY
-		if (distanceFromBottom > this.thumbnailMargin) {
-			this.setState({thumbnailState: undefined})
-			return
+	function hoverThumbnail(e:MouseEvent) {
+		if (!v) return
+		const distanceFromBottom = v.height - e.layerY
+		if (distanceFromBottom > thumbnailMargin) {
+			return setThumbnailState(undefined)
 		}
-		const timelineWidth = video.width - margins.left - margins.right
+		const timelineWidth = v.width - margins.left - margins.right
 		const videoPercentage = (e.layerX - margins.left) / timelineWidth 
 		if (videoPercentage < 0 || videoPercentage > 1) {
-			this.setState({thumbnailState: undefined})
-			return
+			return setThumbnailState(undefined)
 		}
-		const targetTime = video.duration * videoPercentage
-		this.setState({
-			thumbnailState: {
-				offsetX: e.layerX - (this.thumbnailWidth / 2),
-				timestamp: targetTime
-			}
+		const targetTime = v.duration * videoPercentage
+		setThumbnailState({
+			offsetX: e.layerX - (thumbnailWidth / 2),
+			timestamp: targetTime
 		})
 	}
 
-	componentDidUpdate() {
-		const {playbackRate, showThumbnail} = this.props
-		const video = this.video.current!
-		const rate = playbackRate || 1
-		video.playbackRate = rate
-		this.setIO()
-		if (showThumbnail && browser !== 'IE') {
-			const {thumbnailState} = this.state
-			const thumbnail = this.thumbnail.current
-			if (thumbnail && thumbnailState) {
-				thumbnail.currentTime = thumbnailState.timestamp
-			}
-			video.onmouseover = this.hoverThumbnail
-		} else {
-			video.onmouseover = null
+	React.useEffect(() => {
+		if (!v) return
+		v.playbackRate = playbackRate
+	}, [playbackRate, v])
+
+	React.useEffect(() => {
+		if (!v) return
+		v.onmouseover = showThumbnail && browser !== 'IE' ? hoverThumbnail : null
+	}, [showThumbnail, hoverThumbnail, v])
+
+	React.useEffect(() => {
+		const t = thumbnail.current
+		// console.log(t)
+		if (showThumbnail && browser !== 'IE' && t && thumbnailState) {
+			t.currentTime = thumbnailState.timestamp
 		}
+	}, [showThumbnail, thumbnailState, v])
+
+	function hideTimeout() {
+		setOverlayTimeout(undefined)
 	}
 
-	hideTimeout = () => {
-		this.setState({
-			overlayTimeout: undefined
-		})
-	}
-
-	componentDidMount() {
-		const {display, onLoad, onError, onDrag, showThumbnail} = this.props
-		const video = this.video.current!
-		display.video = video
+	React.useEffect(() => {
+		if (!v) return
+		display.video = v
 		if (display.startTime) {
-			video.onload = () => { video.currentTime = display.startTime! }
+			v.onload = () => { v.currentTime = display.startTime! }
 		} else {
-			video.onerror = onError
-			video.onloadeddata = e => video.currentTime = video.duration / 2
-			video.onloadedmetadata = onLoad
+			v.onerror = onError
+			v.onloadeddata = e => v.currentTime = v.duration / 2
+			v.onloadedmetadata = onLoad
 		}
-		video.ondragstart = e => {
+		v.ondragstart = e => {
 			const target = e.target! as HTMLVideoElement
 			const distanceFromBottom = target.height - e.offsetY
-			if (distanceFromBottom < this.dragMargin) {
+			if (distanceFromBottom < dragMargin) {
 				e.preventDefault()
 				return
 			}
 			onDrag(display)
 		}
-		video.onmousemove = e => {
-			showThumbnail && browser !== 'IE' && this.hoverThumbnail(e)
-			const {overlayDuration} = this.props
-			const {overlayTimeout} = this.state
+		v.onmousemove = e => {
+			showThumbnail && browser !== 'IE' && hoverThumbnail(e)
 			overlayTimeout && clearTimeout(overlayTimeout)
-			this.setState({
-				overlayTimeout: setTimeout(this.hideTimeout, overlayDuration || 3000)
-			})
+			setOverlayTimeout(setTimeout(hideTimeout, overlayDuration))
 		}
-		video.onmouseout = e => {
-			this.setState({thumbnailState: undefined})
+		v.onmouseout = e => {
+			setThumbnailState(undefined)
 		}
-		this.setIO()
+	}, [display, hoverThumbnail, onDrag, onError, onLoad, overlayDuration, overlayTimeout, showThumbnail, v])
+
+	function getIO() {
+		if (!(v && inTime && outTime)) return
+		const duration = v.duration
+		const ip = inTime || 0
+		const op = outTime || duration
+		const timelineWidth = v.width - margins.left - margins.right
+		const ix = (ip / duration) * timelineWidth
+		const ox = (op / duration) * timelineWidth
+		return <>
+			<IOMarker offset={ix} color="gold" />
+			<IOMarker offset={ox} color="gold" />
+		</>
 	}
 
-	getIO() {
-		const {inTime, outTime} = this.props
-		const video = this.video.current!
-
-		if (inTime || outTime) {
-			const duration = video.duration
-			const ip = inTime || 0
-			const op = outTime || duration
-			const timelineWidth = video.width - margins.left - margins.right
-			const ix = (ip / duration) * timelineWidth
-			const ox = (op / duration) * timelineWidth
-			return <>
-				<IOMarker offset={ix} color="gold" />
-				<IOMarker offset={ox} color="gold" />
-			</>
-		}
-	}
-
-	adjustDisplayTime(adjustment:number, percentage:boolean = false) {
-		const video = this.video.current!
-		const end = video.duration
+	function adjustDisplayTime(adjustment:number, percentage:boolean = false) {
+		if (!v) return
+		const end = v.duration
 		if (percentage) {
 			adjustment = end * adjustment
 		}
-		const diff = end - video.currentTime
+		const diff = end - v.currentTime
 		if (adjustment > diff) {
-			video.currentTime = adjustment - diff
+			v.currentTime = adjustment - diff
 		} else {
-			video.currentTime = video.currentTime + adjustment
+			v.currentTime = v.currentTime + adjustment
 		}
 	}
 
-	render() {
-		const {size, onMouseOver, onMouseOut, display, objectFit, showOverlay, showThumbnail, playbackRate,
-			removeCallback, copyCallback, exclusiveCallback, inCallback, outCallback, speedCallback} = this.props
-		const {thumbnailState, overlayTimeout} = this.state
-
-		return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut} onKeyDown={ev => {
-			const video = this.video.current!
-			const key = ev.key.toLowerCase()
-			if (ev.shiftKey) {
-				const shiftDisplayActions = {
-					"arrowleft": () => this.adjustDisplayTime(-.1, true),
-					"arrowright": () => this.adjustDisplayTime(.1, true),
-					"f": () => fullscreenElement(video)
-				} as ActionControls
-				key in shiftDisplayActions && shiftDisplayActions[key]()
-			} else if (ev.ctrlKey) {
-				const ctrlDisplayActions = {
-				} as ActionControls
-				key in ctrlDisplayActions && ctrlDisplayActions[key]()
-			} else {
-				const displayActions = {
-					"m": () => video.muted = !video.muted,
-					"arrowleft": () => this.adjustDisplayTime(-60),
-					"arrowright": () => this.adjustDisplayTime(60),
-				} as ActionControls
-				key in displayActions && displayActions[key]()
-			}
-			console.log(key)
-		}}>
-			{overlayTimeout && <div className="display-border" style={{width: `${size.width}px`, height: `${size.height}px`, pointerEvents: msBrowser ? 'none' : 'auto'}}>
-				{`${display.file.name}${playbackRate === 1 ? "" : " ("+playbackRate+"x)"}`}
-			</div>}
-			{overlayTimeout && <div className="display-controls">
-				<button onClick={removeCallback}>X</button>
-				<button onClick={() => copyCallback()}>C</button>
-				<button onClick={exclusiveCallback}>E</button>
-				<button onClick={inCallback}>I</button>
-				<button onClick={outCallback}>O</button>
-				<button onClick={() => speedCallback(2)}>&raquo;</button>
-				<button onClick={() => speedCallback(0.5)}>&laquo;</button>
-			</div>}
-			{showOverlay && this.getIO()}
-			{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={this.thumbnailWidth} className="thumbnail" ref={this.thumbnail} style={{left: thumbnailState.offsetX}} />}
-			<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
-				{...size} ref={this.video} style={{objectFit}}
-				// title={display.file.name} // causes hover to display title which gets in the way
-				/>
-		</div>
+	const shiftDisplayActions = {
+		"arrowleft": () => adjustDisplayTime(-.1, true),
+		"arrowright": () => adjustDisplayTime(.1, true),
+		"f": () => v && fullscreenElement(v)
 	}
+	const displayActions = {
+		"m": () => { if (!v) return; v.muted = !v.muted},
+		"arrowleft": () => adjustDisplayTime(-60),
+		"arrowright": () => adjustDisplayTime(60),
+	}
+
+	function tryActions(actions:{[key:string]:()=>void}, key:string) {
+		key in actions && actions[key]()
+	}
+	function handleDisplayKeyDown(ev:React.KeyboardEvent<HTMLDivElement>) {
+		const key = ev.key.toLowerCase()
+		if (ev.shiftKey) {
+			tryActions(shiftDisplayActions, key)
+		} else {
+			tryActions(displayActions, key)
+		}
+	}
+
+	return <div className="display" {...size} onMouseOver={onMouseOver} onMouseOut={onMouseOut} onKeyDown={handleDisplayKeyDown}>
+		{overlayTimeout && <div className="display-border" style={{...size, pointerEvents: msBrowser ? 'none' : 'auto'}}>
+			{`${display.file.name}${playbackRate === 1 ? "" : " ("+playbackRate+"x)"}`}
+		</div>}
+		{overlayTimeout && <div className="display-controls">
+			<button onClick={removeCallback}>X</button>
+			<button onClick={() => copyCallback()}>C</button>
+			<button onClick={exclusiveCallback}>E</button>
+			<button onClick={inCallback}>I</button>
+			<button onClick={outCallback}>O</button>
+			<button onClick={() => speedCallback(2)}>&raquo;</button>
+			<button onClick={() => speedCallback(0.5)}>&laquo;</button>
+		</div>}
+		{showOverlay && getIO()}
+		{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={thumbnailWidth} className="thumbnail" ref={thumbnail} style={{left: thumbnailState.offsetX}} />}
+		<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
+			{...size} ref={vRef} style={{objectFit}} />
+	</div>
 }
 
-interface IOMarkerProps {
-	offset:number,
+type IOMarkerProps = {
+	offset:number
 	color:string
 }
 function IOMarker({offset, color}:IOMarkerProps) {

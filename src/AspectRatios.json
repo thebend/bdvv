@@ -1,0 +1,19 @@
+[{
+	"ratio": 1.7777777777777777,
+	"name": "16:9 (High Def)"
+}, {
+	"ratio": 1.3333333333333333,
+	"name": "4:3 (Standard Def)"
+}, {
+	"ratio": 1,
+	"name": "1:1 (Square)"
+}, {
+	"ratio": 0.5625,
+	"name": "9:16 (Vertical HD)"
+}, {
+	"ratio": 1.85,
+	"name": "1.85:1 (Cinematic)"
+}, {
+	"ratio": 2.35,
+	"name": "2.35:1 (Anamorphic)"
+}]
