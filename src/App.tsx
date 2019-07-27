@@ -2,30 +2,21 @@
 // import 'react-app-polyfill/ie11'
 // import '@babel/polyfill'
 // import 'core-js/modules/es6.array.from'
-import React from 'react'
-import { ObjectFitProperty } from "csstype"
-import './App.css'
-import { BDVideo, Display } from './BDVideo'
-import Help from './Help'
-import { toggleFullscreen } from './FullScreen'
-import AspectRatios from './AspectRatios.json'
-
-type AspectRatioType = typeof AspectRatios[number]
-
-export const OBJECT_FITS = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFitProperty[]
-
-const avg = (arr:number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
 
 // TODO: refence react as third party library on cdn?
+import React from 'react'
+import { ObjectFitProperty } from "csstype"
+import { BDVideo, Display } from './BDVideo'
+import Help from './components/Help'
+import { toggleFullscreen } from './FullScreen'
+import { ErrorDisplay } from './components/ErrorDisplay'
+import { Splash } from './components/Splash'
+import aspectRatios from './AspectRatios.json'
+import './App.css'
 
-// TODO: add logo
-const SPLASH = <section id="splash">
-	<p>Auto-play any number of videos or copies of videos in an optimally arranged grid with simple drag-and-drop.  Videos start half-way in and loop, ensuring immediate, continuous immersion, great for scouring surveillance footage, finding the best highlights from your last gaming stream, and more!</p>
-	<p>Find your favourite moments quickly with thumbnail scrubbing and keyboard shortcuts to jump ahead in time 1m (→) or 10% (Shift →), or adjust playback speed (Ctrl →).</p>
-	<p>Use shortcut keys to rapidly (c)opy or (r)emove displays, set (i)n/(o)ut loop points, (f)ullscreen the display, toggle (m)ute, etc.</p>
-	{/* <img src="clipart/surveillance.jpg" alt="Surveillance" />
-	<img src="clipart/television.jpg" alt="Television" /> */}
-</section>
+export const objectFits = ['contain', 'cover', 'fill', 'scale-down'] as ObjectFitProperty[]
+
+const avg = (arr:number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
 
 function stopEvent(e:Event) {
 	e.preventDefault()
@@ -37,20 +28,17 @@ type Dimensions = {
 	y:number
 }
 
-interface AppState {
-	showHelp:boolean,
-	showThumbnails:boolean,
-	displays:Display[],
-	maxId:number,
-	activeDisplay?:Display,
-	lastDisplay?:Display,
-	viewport?:Dimensions,
-	ratioIndex:number,
-	aspectRatio:AspectRatioType,
-	objectFitIndex:number,
-	objectFit:ObjectFitProperty,
-	firstBatch:boolean,
-	errorDisplays:Display[],
+type AppState = {
+	showHelp:boolean
+	showThumbnails:boolean
+	displays:Display[]
+	maxId:number
+	activeDisplay?:Display
+	viewport?:Dimensions
+	aspectRatioIndex:number
+	objectFitIndex:number
+	firstBatch:boolean
+	errorDisplays:Display[]
 	dragSrc?:Display
 }
 
@@ -73,10 +61,8 @@ class App extends React.Component<{},AppState> {
 		showThumbnails: true,
 		displays: [],
 		maxId: 0,
-		ratioIndex: 0,
-		aspectRatio: AspectRatios[0],
+		aspectRatioIndex: 0,
 		objectFitIndex: 0,
-		objectFit: OBJECT_FITS[0],
 		firstBatch: true,
 		errorDisplays: [],
 	}
@@ -144,7 +130,12 @@ class App extends React.Component<{},AppState> {
 		})
 	}
 
+	tryActions = (actions:{[key:string]:()=>void}, key:string) => {
+		key in actions && actions[key]()
+	}
+
 	handleKeyPress = (ev:KeyboardEvent) => {
+		console.log('app handling keypress')
 		const key = ev.key.toLowerCase()
 		if (key in this.globalActions && !ev.shiftKey && !ev.ctrlKey) {
 			this.globalActions[key]()
@@ -153,29 +144,29 @@ class App extends React.Component<{},AppState> {
 
 		const d = this.state.activeDisplay
 		if (!d) return
+		const ctrlDisplayActions = {
+			"arrowleft": () => this.adjustVideoSpeed(d, 0.5),
+			"arrowright": () => this.adjustVideoSpeed(d, 2)
+		}
+		const shiftDisplayActions = {
+			"s": () => this.syncPlaybackRates(d.playbackRate),
+		}
+		const displayActions = {
+			"delete": () => this.deleteDisplay(d),
+			"c": () => this.addDisplayCopy(d),
+			"d": () => this.distributeTimes(d),
+			"e": () => this.setState({displays: [d]}),
+			"i": () => this.setVideoIO(d, "in"),
+			"o": () => this.setVideoIO(d, "out"),
+			"r": () => this.deleteDisplay(d),
+		}
 
 		if (ev.shiftKey) {
-			const shiftDisplayActions = {
-				"s": () => this.syncPlaybackRates(d.playbackRate),
-			} as ActionControls
-			key in shiftDisplayActions && shiftDisplayActions[key]()
+			this.tryActions(shiftDisplayActions, key)
 		} else if (ev.ctrlKey) {
-			const ctrlDisplayActions = {
-				"arrowleft": () => this.adjustVideoSpeed(d, 0.5),
-				"arrowright": () => this.adjustVideoSpeed(d, 2)
-			} as ActionControls
-			key in ctrlDisplayActions && ctrlDisplayActions[key]()
+			this.tryActions(ctrlDisplayActions, key)
 		} else {
-			const displayActions = {
-				"delete": () => this.deleteDisplay(d),
-				"c": () => this.addDisplayCopy(d),
-				"d": () => this.distributeTimes(d),
-				"e": () => this.setState({displays: [d]}),
-				"i": () => this.setVideoIO(d, "in"),
-				"o": () => this.setVideoIO(d, "out"),
-				"r": () => this.deleteDisplay(d),
-			} as ActionControls
-			key in displayActions && displayActions[key]()
+			this.tryActions(displayActions, key)
 			if (key >= "2" && key <= "9") {
 				this.fillGrid(d, parseInt(key))
 				this.distributeTimes(d)
@@ -184,7 +175,8 @@ class App extends React.Component<{},AppState> {
 	}
 
 	getVideoSize() {
-		const {displays, aspectRatio, viewport} = this.state
+		const {displays, aspectRatioIndex, viewport} = this.state
+		const aspectRatio = aspectRatios[aspectRatioIndex]
 		// assume minimum size if no viewport (shouldn't happen)
 		if (!viewport) return {width: 1, height: 1}
 		// if only one display, use full size
@@ -268,21 +260,13 @@ class App extends React.Component<{},AppState> {
 	}
 
 	nextDimensionRatio() {
-		let i = this.state.ratioIndex + 1
-		if (i >= AspectRatios.length) i = 0
-		this.setState({
-			ratioIndex: i,
-			aspectRatio: AspectRatios[i]
-		})
+		const i = (this.state.aspectRatioIndex + 1) % aspectRatios.length
+		this.setState({aspectRatioIndex: i})
 	}
 
 	nextObjectFit() {
-		let i = this.state.objectFitIndex + 1
-		if (i >= OBJECT_FITS.length) i = 0
-		this.setState({
-			objectFitIndex: i,
-			objectFit: OBJECT_FITS[i]
-		})
+		const i = (this.state.objectFitIndex + 1) % objectFits.length
+		this.setState({ objectFitIndex: i })
 	}
 
 	componentDidMount() {
@@ -299,17 +283,14 @@ class App extends React.Component<{},AppState> {
 
 	getRecommendedAspectRatioIndex() {
 		const avgRatio = avg(this.state.displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
-		const closestRatio = [...AspectRatios].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
-		const i = AspectRatios.findIndex(i => i.name === closestRatio.name)
+		const closestRatio = [...aspectRatios].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
+		const i = aspectRatios.findIndex(i => i.name === closestRatio.name)
 		return i
 	}
 
-	setRecommendedAspectRatio() {
+	setRecommendedAspectRatioIndex() {
 		const i = this.getRecommendedAspectRatioIndex()
-		this.setState({
-			aspectRatio: AspectRatios[i],
-			ratioIndex: i
-		})
+		this.setState({ aspectRatioIndex: i })
 	}
 
 	handleVideoError(display:Display) {
@@ -333,20 +314,22 @@ class App extends React.Component<{},AppState> {
 	}
 
 	render() {
-		const {displays, errorDisplays, activeDisplay, showThumbnails, showHelp, aspectRatio, objectFit} = this.state
+		const {displays, errorDisplays, activeDisplay, showThumbnails, showHelp, objectFitIndex, aspectRatioIndex} = this.state
+		const objectFit = objectFits[objectFitIndex]
+		const aspectRatio = aspectRatios[aspectRatioIndex]
 		const size = this.getVideoSize()
 		return <>
 			<main ref={this.viewport}
 				onDrop={e => this.reorderDisplays(e.target)}>
-				{displays.length === 0 && SPLASH}
+				{displays.length === 0 && <Splash />}
 				{displays.map(i => <BDVideo size={size} objectFit={objectFit} key={i.id} display={i}
 					showOverlay={i === activeDisplay}
 					showThumbnail={showThumbnails}
 					playbackRate={i.playbackRate}
 					onDrag={display => this.setState({dragSrc: display})}
-					onMouseOver={() => this.setState({activeDisplay: i, lastDisplay: i})}
+					onMouseOver={() => this.setState({activeDisplay: i})}
 					onMouseOut={() => this.setState({activeDisplay: undefined})}
-					onLoad={() => i.triggerResize && this.setRecommendedAspectRatio()}
+					onLoad={() => i.triggerResize && this.setRecommendedAspectRatioIndex()}
 					onError={() => this.handleVideoError(i)}
 					inTime={i.in} outTime={i.out}
 					removeCallback={() => this.deleteDisplay(i)}
@@ -361,24 +344,10 @@ class App extends React.Component<{},AppState> {
 			{errorDisplays.length > 0 && <ErrorDisplay errorDisplays={errorDisplays} dismissCallback={() => this.setState({errorDisplays: []})} />}
 			{showHelp && <Help
 				{...{aspectRatio, objectFit}}
-				aspectRatioCallback={aspectRatio => this.setState({aspectRatio})}
-				objectFitCallback={objectFit => this.setState({objectFit})} />}
+				aspectRatioCallback={i=>this.setState({aspectRatioIndex: i})}
+				objectFitCallback={i=>this.setState({objectFitIndex: i})} />}
 		</>
 	}
-}
-
-type ErrorDisplayProps = {
-	errorDisplays:Display[]
-	dismissCallback:()=>void
-}
-function ErrorDisplay({errorDisplays, dismissCallback}:ErrorDisplayProps) {
-	return <section id="errors">
-		<h2>Errors</h2><ol>
-			{errorDisplays.map((display, i) => <li key={i}>{display.file.name} ({display.file.type})</li>)}
-		</ol>
-		<p>Only videos supported by your web browser will play successfully.  <code>.mp4</code> and <code>.webm</code> files are good bets.</p>
-		<form onSubmit={dismissCallback}><button>Dismiss</button></form>
-	</section>
 }
 
 export default App

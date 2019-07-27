@@ -1,34 +1,9 @@
 import React from 'react'
-import { fullscreenElement } from './FullScreen'
 import { ObjectFitProperty } from 'csstype'
+import { fullscreenElement } from './FullScreen'
+import { margins, browser, msBrowser } from './browser'
+import { IOMarker } from './components/IOMarker'
 import './BDVideo.css'
-
-function getBrowser() {
-	if (navigator.userAgent.indexOf(' Trident/') > -1) return 'IE'
-	if (navigator.userAgent.indexOf(' Edge/') > -1) return 'Edge'
-	return 'Chrome'
-}
-
-export const browser = getBrowser()
-export const msBrowser = ["Edge","IE"].indexOf(browser) > -1
-
-type ActionControls = {
-	[key:string]: ()=>void
-}
-
-const VIDEO_MARGINS = {
-	"edge": {
-		"left": 116,
-		"right": 220,
-		"bottom": 24
-	},
-	"chrome": {
-		"left": 24,
-		"right": 24,
-		"bottom": 16
-	}
-}
-const margins = browser === "Chrome" ? VIDEO_MARGINS["chrome"] : VIDEO_MARGINS["edge"]
 
 export type Display = {
 	id:number
@@ -74,14 +49,16 @@ type ThumbnailState = {
 	timestamp:number
 }
 
+const overlayDuration = 3000
 export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
-	onLoad, onError, onDrag, overlayDuration=3000, size, onMouseOver, onMouseOut,
+	onLoad, onError, onDrag, size, onMouseOver, onMouseOut,
 	objectFit, showOverlay, removeCallback, copyCallback, exclusiveCallback,
 	inCallback, outCallback, speedCallback}:BDVideoProps) {
 
-	const [v, setV] = React.useState<HTMLVideoElement>()
+	const [video, setVideo] = React.useState<HTMLVideoElement>()
+	const v = video!
 	const vRef = React.useCallback((node:HTMLVideoElement) => {
-		setV(node)
+		setVideo(node)
 	}, [])
 
 	const thumbnail = React.useRef<HTMLVideoElement>(null)
@@ -103,7 +80,6 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 	}, [inTime, outTime, v])
 
 	function hoverThumbnail(e:MouseEvent) {
-		if (!v) return
 		const distanceFromBottom = v.height - e.layerY
 		if (distanceFromBottom > thumbnailMargin) {
 			return setThumbnailState(undefined)
@@ -131,8 +107,8 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 	}, [showThumbnail, hoverThumbnail, v])
 
 	React.useEffect(() => {
+		if (!v) return
 		const t = thumbnail.current
-		// console.log(t)
 		if (showThumbnail && browser !== 'IE' && t && thumbnailState) {
 			t.currentTime = thumbnailState.timestamp
 		}
@@ -172,7 +148,7 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 	}, [display, hoverThumbnail, onDrag, onError, onLoad, overlayDuration, overlayTimeout, showThumbnail, v])
 
 	function getIO() {
-		if (!(v && inTime && outTime)) return
+		if (!(inTime || outTime)) return
 		const duration = v.duration
 		const ip = inTime || 0
 		const op = outTime || duration
@@ -186,17 +162,8 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 	}
 
 	function adjustDisplayTime(adjustment:number, percentage:boolean = false) {
-		if (!v) return
-		const end = v.duration
-		if (percentage) {
-			adjustment = end * adjustment
-		}
-		const diff = end - v.currentTime
-		if (adjustment > diff) {
-			v.currentTime = adjustment - diff
-		} else {
-			v.currentTime = v.currentTime + adjustment
-		}
+		if (percentage) adjustment = v.duration * adjustment
+		v.currentTime = (v.currentTime + adjustment + v.duration) % v.duration
 	}
 
 	const shiftDisplayActions = {
@@ -205,7 +172,7 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		"f": () => v && fullscreenElement(v)
 	}
 	const displayActions = {
-		"m": () => { if (!v) return; v.muted = !v.muted},
+		"m": () => { v.muted = !v.muted },
 		"arrowleft": () => adjustDisplayTime(-60),
 		"arrowright": () => adjustDisplayTime(60),
 	}
@@ -213,7 +180,9 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 	function tryActions(actions:{[key:string]:()=>void}, key:string) {
 		key in actions && actions[key]()
 	}
+
 	function handleDisplayKeyDown(ev:React.KeyboardEvent<HTMLDivElement>) {
+		console.log('running inside display')
 		const key = ev.key.toLowerCase()
 		if (ev.shiftKey) {
 			tryActions(shiftDisplayActions, key)
@@ -240,18 +209,4 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
 			{...size} ref={vRef} style={{objectFit}} />
 	</div>
-}
-
-type IOMarkerProps = {
-	offset:number
-	color:string
-}
-function IOMarker({offset, color}:IOMarkerProps) {
-	const diameter = 10
-	const yMargin = margins.bottom
-	return <svg className="iomarker" width={diameter} height={diameter} viewBox={`0 0 2 2`}
-		style={{bottom: yMargin + (diameter/2), left: margins.left + offset - (diameter/2)}}
-	>
-		<circle cx={1} cy={1} r={1} fill={color} />
-	</svg>
 }
