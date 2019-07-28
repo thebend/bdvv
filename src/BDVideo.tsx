@@ -74,6 +74,7 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 			const beforeIn = inTime && inTime > v.currentTime
 			if (pastOut || beforeIn) v.currentTime = inTime || 0
 		}
+		v.addEventListener('mouseover', e=>v.focus())
 	}, [inTime, outTime, v])
 
 	const hoverThumbnail = React.useCallback((e:MouseEvent) => {
