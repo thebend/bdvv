@@ -71,7 +71,6 @@ function App() {
 	React.useEffect(() => {
 		window.onkeydown = (ev) => {
 			const key = ev.key.toLowerCase()
-			console.log('app handling keypress for key', key)
 			if (key in globalActions && !ev.shiftKey && !ev.ctrlKey) {
 				return globalActions[key as keyof typeof globalActions]()
 			}

@@ -154,7 +154,6 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 	}
 
 	function handleDisplayKeyDown(ev:React.KeyboardEvent<HTMLDivElement>) {
-		console.log('running inside display')
 		const key = ev.key.toLowerCase()
 		if (ev.shiftKey) {
 			tryActions(shiftDisplayActions, key)
