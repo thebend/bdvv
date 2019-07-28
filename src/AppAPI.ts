@@ -244,18 +244,21 @@ export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 		if (!sourceVideo) return
 		const sourceFile = sourceDisplay.file
 
-		const matchingDisplays = state.displays.filter(i => i.file === sourceFile)
-		const di = matchingDisplays.indexOf(sourceDisplay)
-		// start with target display so it keeps its current time, bump up from there looping back to start
-		const orderedDisplays = [sourceDisplay, ...matchingDisplays.slice(di+1), ...matchingDisplays.slice(0, di)]
+		setState(prev => {
+			const matchingDisplays = prev.displays.filter(i => i.file === sourceFile)
+			const di = matchingDisplays.indexOf(sourceDisplay)
+			// start with target display so it keeps its current time, bump up from there looping back to start
+			const orderedDisplays = [sourceDisplay, ...matchingDisplays.slice(di+1), ...matchingDisplays.slice(0, di)]
 
-		const t1 = sourceVideo.currentTime
-		const duration = sourceVideo.duration
-		const spacing = duration / orderedDisplays.length
-		orderedDisplays.forEach((v, i) => {
-			const targetTime = t1 + (spacing * i)
-			// loop time back to beginning once we exceed end of video
-			v.video!.currentTime = targetTime % duration
+			const t1 = sourceVideo.currentTime
+			const duration = sourceVideo.duration
+			const spacing = duration / orderedDisplays.length
+			orderedDisplays.forEach((v, i) => {
+				const targetTime = t1 + (spacing * i)
+				// loop time back to beginning once we exceed end of video
+				v.video!.currentTime = targetTime % duration
+			})
+			return prev
 		})
 	}
 
