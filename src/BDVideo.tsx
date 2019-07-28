@@ -6,7 +6,7 @@ import { IOMarker } from './components/IOMarker'
 import './BDVideo.css'
 
 export type Display = {
-	id:number
+	id:string
 	file:File
 	url:string
 	startTime?:number
@@ -29,7 +29,6 @@ type BDVideoProps = {
 	inTime?:number
 	outTime?:number
 	playbackRate:number
-	overlayDuration?:number
 	onMouseOver:()=>void
 	onMouseOut:()=>void
 	onLoad:()=>void
@@ -45,9 +44,13 @@ type BDVideoProps = {
 }
 
 type ThumbnailState = {
-	offsetX:number
+	offset:number // x-axis mouse position
 	timestamp:number
 }
+
+const dragMargin = 80
+const thumbnailWidth = 196
+const thumbnailMargin = margins.bottom + 8
 
 const overlayDuration = 3000
 export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
@@ -61,14 +64,8 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		setVideo(node)
 	}, [])
 
-	const thumbnail = React.useRef<HTMLVideoElement>(null)
-	// TODO: set these to null instead of starting and allowing undefined?
 	const [overlayTimeout, setOverlayTimeout] = React.useState<NodeJS.Timeout|undefined>()
 	const [thumbnailState, setThumbnailState] = React.useState<ThumbnailState|undefined>()
-
-	const dragMargin = 80
-	const thumbnailWidth = 196
-	const thumbnailMargin = margins.bottom + 8
 
 	React.useEffect(() => {
 		if (!v) return
@@ -79,7 +76,7 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		}
 	}, [inTime, outTime, v])
 
-	function hoverThumbnail(e:MouseEvent) {
+	const hoverThumbnail = React.useCallback((e:MouseEvent) => {
 		const distanceFromBottom = v.height - e.layerY
 		if (distanceFromBottom > thumbnailMargin) {
 			return setThumbnailState(undefined)
@@ -91,10 +88,10 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		}
 		const targetTime = v.duration * videoPercentage
 		setThumbnailState({
-			offsetX: e.layerX - (thumbnailWidth / 2),
+			offset: e.layerX,
 			timestamp: targetTime
 		})
-	}
+	}, [v])
 
 	React.useEffect(() => {
 		if (!v) return
@@ -105,18 +102,6 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		if (!v) return
 		v.onmouseover = showThumbnail && browser !== 'IE' ? hoverThumbnail : null
 	}, [showThumbnail, hoverThumbnail, v])
-
-	React.useEffect(() => {
-		if (!v) return
-		const t = thumbnail.current
-		if (showThumbnail && browser !== 'IE' && t && thumbnailState) {
-			t.currentTime = thumbnailState.timestamp
-		}
-	}, [showThumbnail, thumbnailState, v])
-
-	function hideTimeout() {
-		setOverlayTimeout(undefined)
-	}
 
 	React.useEffect(() => {
 		if (!v) return
@@ -140,26 +125,13 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		v.onmousemove = e => {
 			showThumbnail && browser !== 'IE' && hoverThumbnail(e)
 			overlayTimeout && clearTimeout(overlayTimeout)
-			setOverlayTimeout(setTimeout(hideTimeout, overlayDuration))
+			setOverlayTimeout(setTimeout(()=>setOverlayTimeout(undefined), overlayDuration))
 		}
 		v.onmouseout = e => {
 			setThumbnailState(undefined)
 		}
-	}, [display, hoverThumbnail, onDrag, onError, onLoad, overlayDuration, overlayTimeout, showThumbnail, v])
+	}, [display, hoverThumbnail, onDrag, onError, onLoad, overlayTimeout, showThumbnail, v])
 
-	function getIO() {
-		if (!(inTime || outTime)) return
-		const duration = v.duration
-		const ip = inTime || 0
-		const op = outTime || duration
-		const timelineWidth = v.width - margins.left - margins.right
-		const ix = (ip / duration) * timelineWidth
-		const ox = (op / duration) * timelineWidth
-		return <>
-			<IOMarker offset={ix} color="gold" />
-			<IOMarker offset={ox} color="gold" />
-		</>
-	}
 
 	function adjustDisplayTime(adjustment:number, percentage:boolean = false) {
 		if (percentage) adjustment = v.duration * adjustment
@@ -197,16 +169,54 @@ export function BDVideo({inTime, outTime, playbackRate, showThumbnail, display,
 		</div>}
 		{overlayTimeout && <div className="display-controls">
 			<button onClick={removeCallback}>X</button>
-			<button onClick={() => copyCallback()}>C</button>
+			<button onClick={copyCallback}>C</button>
 			<button onClick={exclusiveCallback}>E</button>
 			<button onClick={inCallback}>I</button>
 			<button onClick={outCallback}>O</button>
 			<button onClick={() => speedCallback(2)}>&raquo;</button>
 			<button onClick={() => speedCallback(0.5)}>&laquo;</button>
 		</div>}
-		{showOverlay && getIO()}
-		{showThumbnail && thumbnailState && <video controls={false} autoPlay={false} loop={false} muted={true} src={display.url} width={thumbnailWidth} className="thumbnail" ref={thumbnail} style={{left: thumbnailState.offsetX}} />}
+		{showOverlay && <IOBar {...{inTime, outTime}} video={video!} />}
+		{showThumbnail && thumbnailState && <Thumbnail src={display.url} {...thumbnailState} />}
 		<video controls={true} autoPlay={true} loop={true} muted={true} src={display.url} draggable={!msBrowser}
 			{...size} ref={vRef} style={{objectFit}} />
 	</div>
+}
+
+type ThumbnailProps = {
+	src:string
+	offset:number
+	timestamp:number
+	width?:number
+}
+const Thumbnail = ({src, offset, timestamp, width=thumbnailWidth}:ThumbnailProps) => {
+	const video = React.useRef<HTMLVideoElement>(null)
+	React.useEffect(() => {
+		video.current!.currentTime = timestamp
+	}, [timestamp])
+
+	return <video className="thumbnail"
+		ref={video}
+		controls={false} autoPlay={false} loop={false} muted={true}
+		src={src} width={width} style={{left: offset - (width / 2)}} />
+}
+
+type IOBarProps = {
+	inTime?:number
+	outTime?:number
+	video:HTMLVideoElement
+}
+
+const IOBar = ({inTime, outTime, video}:IOBarProps) => {
+	if (!(inTime || outTime)) return <></>
+	const duration = video.duration
+	const ip = inTime || 0
+	const op = outTime || duration
+	const timelineWidth = video.width - margins.left - margins.right
+	const ix = (ip / duration) * timelineWidth
+	const ox = (op / duration) * timelineWidth
+	return <>
+		<IOMarker offset={ix} color="gold" />
+		<IOMarker offset={ox} color="gold" />
+	</>
 }

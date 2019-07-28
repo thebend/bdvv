@@ -1,7 +1,7 @@
 import React from 'react'
 import './Help.css'
 import { ObjectFitProperty } from "csstype"
-import {objectFits} from '../App'
+import {objectFits} from '../AppAPI'
 import AspectRatios from '../AspectRatios.json'
 type AspectRatio = typeof AspectRatios[number]
 
@@ -37,9 +37,9 @@ const DISCLAIMER = <footer>
 
 type HelpSettingsProps = {
 	objectFit:ObjectFitProperty
-	objectFitCallback:(i:number)=>void
+	objectFitCallback:(v:ObjectFitProperty)=>void
 	aspectRatio:AspectRatio
-	aspectRatioCallback:(i:number)=>void
+	aspectRatioCallback:(v:AspectRatio)=>void
 }
 
 // const getAR = (v:AspectRatio) => `${v.ratio.toFixed(2)} / ${v.name}`
@@ -53,13 +53,13 @@ export function Help(props:HelpSettingsProps) {
 			<form>
 				<SelectInput
 					name="objectScale" label="Video Fit/Fill"
-					value={props.objectFit} choices={objectFits.map((v, i) => <option key={i} value={i}>{v[0].toUpperCase()+v.substr(1)}</option>)}
-					callback={i=>props.objectFitCallback(parseInt(i))} /><br />
+					value={props.objectFit} choices={objectFits.map(v => <option key={v} value={v}>{v[0].toUpperCase()+v.substr(1)}</option>)}
+					callback={v=>props.objectFitCallback(v as ObjectFitProperty)} /><br />
 				<SelectInput
 					name="aspectRatio" label="Aspect Ratio"
 					value={AspectRatios.indexOf(props.aspectRatio).toString()}
 					choices={AspectRatios.map((v, i) => <option key={i} value={i}>{v.name}</option>)}
-					callback={i=>props.aspectRatioCallback(parseInt(i))} /><br />
+					callback={i=>props.aspectRatioCallback(AspectRatios[parseInt(i)])} /><br />
 			</form>
 		</section>
 		{SHORTCUTS}
