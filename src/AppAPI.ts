@@ -19,7 +19,7 @@ type AppState = {
 	fit:ObjectFitProperty
 	aspect:AspectRatio
 
-	active?:Display
+	activeIndex?:number
 	dragSrc?:Display
 
 	displays:Display[]
@@ -37,10 +37,8 @@ const getDisplayCopy = (display:Display) => ({
 const getNext = <T,>(list:T[], current:T) =>
 	list[(list.indexOf(current) + 1) % list.length]
 
-const removeItem = <T,>(list:T[], target:T) => {
-	const i = list.indexOf(target)
-	return [...list.slice(0,i), ...list.slice(i+1)]
-}
+const removeIndex = <T,>(list:T[], i:number) =>
+	[...list.slice(0,i), ...list.slice(i+1)]
 
 export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 	const setPartialState = (partial:Partial<AppState>) => {
@@ -84,23 +82,23 @@ export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 		}))
 	}
 
-	const setExclusive = (display:Display) => {
+	const setExclusive = (i:number) => {
 		setState(prev => {
 			return {
 				...prev,
 				activeIndex: 0,
-				displays: [display]
+				displays: [prev.displays[i]]
 			}
 		})
 	}
 
 	const removeActive = () => {
 		setState(prev => {
-			if (prev.active === undefined) return prev
+			if (prev.activeIndex === undefined) return prev
 			return {
 				...prev,
-				displays: removeItem(prev.displays, prev.active),
-				active: undefined
+				displays: removeIndex(prev.displays, prev.activeIndex),
+				activeIndex: undefined
 			}
 		})
 	}
@@ -130,30 +128,31 @@ export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 		})
 	}
 
-	const copyDisplay = (display:Display) => {
+	const copyDisplay = (i:number) => {
 		setState(prev => {
 			return {
 				...prev,
-				displays: [...prev.displays, getDisplayCopy(display)]
+				displays: [...prev.displays, getDisplayCopy(prev.displays[i])]
 			}
 		})
 	}
 
 	const addCopies = (copies:number) => {
 		setState(prev => {
-			const active = prev.active
-			if (active === undefined) return prev
+			const i = prev.activeIndex
+			if (i === undefined) return prev
 			return {
 				...prev,
-				displays: [...prev.displays, ...[...Array(copies)].map(()=>getDisplayCopy(active))]
+				displays: [
+					...prev.displays,
+					...[...Array(copies)].map(()=>getDisplayCopy(prev.displays[i]))]
 			}
 		})
 	}
 
-	const updateDisplay = (display:Display, updates:Partial<Display>) => {
+	const updateDisplay = (i:number, updates:Partial<Display>) => {
 		setState(prev => {
 			const displays = [...prev.displays]
-			const i = displays.indexOf(display)
 			// shallow effect only!
 			displays[i] = {...displays[i], ...updates}
 			return {
@@ -163,16 +162,16 @@ export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 		})
 	}
 
+	// lots of issues because active is an object, not the object in question
 	const applyToActive = (modifier:(display:Display)=>Partial<Display>) => {
 		setState(prev => {
-			const active = prev.active
-			if (active === undefined) return prev
-			const i = prev.displays.indexOf(active)
+			const i = prev.activeIndex
+			if (i === undefined) return prev
 			return {
 				...prev,
 				displays: [
 					...prev.displays.slice(0, i),
-					{...active, ...modifier(active)},
+					{...prev.displays[i], ...modifier(prev.displays[i])},
 					...prev.displays.slice(i+1)
 				]
 			}
@@ -190,7 +189,11 @@ export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 	}
 
 	const setActiveIO = (marker:'in'|'out') => {
-		applyToActive(d => ({[marker]: d.video!.currentTime}))
+		applyToActive(display => ({
+			[marker]: display[marker] === undefined
+				? display.video!.currentTime
+				: undefined
+		}))
 	}
 
 	const adjustActivePlaybackRate = (adjustment:number) => {
@@ -221,12 +224,12 @@ export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 
 	const handleDisplayError = () => {
 		setState(prev => {
-			const active = prev.active
-			if (active === undefined) return prev
+			const i = prev.activeIndex
+			if (i === undefined) return prev
 			return {
 				...prev,
-				displays: removeItem(prev.displays, active),
-				errorDisplays: [...prev.errorDisplays, active]
+				displays: removeIndex(prev.displays, i),
+				errorDisplays: [...prev.errorDisplays, prev.displays[i]]
 			}
 		})
 	}
@@ -239,19 +242,18 @@ export const AppAPI = ({state, setState}:ApiFactoryProps<AppState>) => {
 	}
 
 
-	const distributeTimes = (sourceDisplay:Display) => {
-		const sourceVideo = sourceDisplay.video
-		if (!sourceVideo) return
-		const sourceFile = sourceDisplay.file
-
+	const distributeTimes = (i:number) => {
 		setState(prev => {
-			const matchingDisplays = prev.displays.filter(i => i.file === sourceFile)
-			const di = matchingDisplays.indexOf(sourceDisplay)
-			// start with target display so it keeps its current time, bump up from there looping back to start
-			const orderedDisplays = [sourceDisplay, ...matchingDisplays.slice(di+1), ...matchingDisplays.slice(0, di)]
+			const display = prev.displays[i]
+			const {video, file} = display
+			if (!video) return prev
 
-			const t1 = sourceVideo.currentTime
-			const duration = sourceVideo.duration
+			const matchingDisplays = prev.displays.filter(i => i.file === file)
+			// start with target display so it keeps its current time, bump up from there looping back to start
+			const orderedDisplays = [display, ...matchingDisplays.slice(i+1), ...matchingDisplays.slice(0, i)]
+
+			const t1 = video.currentTime
+			const duration = video.duration
 			const spacing = duration / orderedDisplays.length
 			orderedDisplays.forEach((v, i) => {
 				const targetTime = t1 + (spacing * i)

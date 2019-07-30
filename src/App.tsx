@@ -75,20 +75,20 @@ function App() {
 				return globalActions[key as keyof typeof globalActions]()
 			}
 
-			const i = api.active
+			const i = api.activeIndex
 			if (i === undefined) return
 			const ctrlDisplayActions = {
 				"arrowleft": () => api.adjustActivePlaybackRate(0.5),
 				"arrowright": () => api.adjustActivePlaybackRate(2)
 			}
 			const shiftDisplayActions = {
-				"s": () => api.syncPlaybackRates(i.video!.playbackRate),
+				"s": () => api.syncPlaybackRates(api.displays[i].video!.playbackRate),
 			}
 			const displayActions = {
 				"delete": api.removeActive,
 				"c": () => api.copyDisplay(i),
 				"d": () => api.distributeTimes(i),
-				"e": () => api.active && api.setExclusive(api.active),
+				"e": () => api.activeIndex && api.setExclusive(api.activeIndex),
 				"i": () => api.setActiveIO('in'),
 				"o": () => api.setActiveIO('out'),
 				"r": api.removeActive,
@@ -133,16 +133,14 @@ function App() {
 		<main ref={viewport}
 			onDrop={e => api.reorderDisplays(e.target)}>
 			{api.displays.length === 0 && <Splash />}
-			{api.displays.map(i => <BDVideo size={size} objectFit={api.fit} key={i.id} display={i}
-				showOverlay={i === api.active}
+			{api.displays.map((d, i) => <BDVideo size={size} objectFit={api.fit} key={d.id} display={d}
+				showOverlay={api.activeIndex === i}
 				showThumbnail={api.showThumbnails}
-				playbackRate={i.playbackRate}
-				onDrag={i => api.setPartialState({dragSrc: i})}
-				onMouseOver={() => api.setPartialState({active: i})}
-				onMouseOut={()=>api.setPartialState({active: undefined})}
-				onLoad={() => i.triggerResize && api.setPartialState({aspect: getRecommendedAspect()})}
+				onDrag={i => api.setPartialState({dragSrc: d})}
+				onMouseOver={() => api.setPartialState({activeIndex: i})}
+				onMouseOut={()=>api.setPartialState({activeIndex: undefined})}
+				onLoad={() => d.triggerResize && api.setPartialState({aspect: getRecommendedAspect()})}
 				onError={() => api.handleDisplayError()}
-				inTime={i.in} outTime={i.out}
 				removeCallback={api.removeActive}
 				copyCallback={()=>api.copyDisplay(i)}
 				exclusiveCallback={() => api.setExclusive(i)}
