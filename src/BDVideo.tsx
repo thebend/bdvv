@@ -14,7 +14,7 @@ export type Display = {
 	in?:number
 	out?:number
 	video?:HTMLVideoElement
-	triggerResize:boolean
+	// triggerResize:boolean
 	playbackRate:number
 }
 

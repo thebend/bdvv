@@ -1,7 +1,7 @@
 import React from 'react'
 import './Help.css'
 import { ObjectFitProperty } from "csstype"
-import {objectFits} from '../AppAPI'
+import {objectFits} from '../AppReducer'
 import AspectRatios from '../AspectRatios.json'
 type AspectRatio = typeof AspectRatios[number]
 

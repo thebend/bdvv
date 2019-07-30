@@ -7,15 +7,13 @@
 import React from 'react'
 import { BDVideo } from './BDVideo'
 import Help from './components/Help'
-import { toggleFullscreen } from './FullScreen'
 import { ErrorDisplay } from './components/ErrorDisplay'
 import { Splash } from './components/Splash'
 import aspectRatios from './AspectRatios.json'
 import './App.css'
 
-import {AppAPI, objectFits} from './AppAPI'
-import { useAPI } from './useAPI'
 import {getVideoSize} from './getVideoSize'
+import { AppReducer, objectFits, AppAction } from './AppReducer'
 
 const avg = (arr:number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
 
@@ -24,12 +22,10 @@ function stopEvent(e:Event) {
 	e.stopPropagation()
 }
 
-function tryActions(actions:{[key:string]:()=>void}, key:string) {
-	key in actions && actions[key]()
-}
+type ActionSet = {[key:string]:AppAction}
 
 function App() {
-	const api = useAPI(AppAPI, {
+	const [state, dispatch] = React.useReducer(AppReducer, {
 		showHelp: true,
 		showThumbnails: true,
 		firstLoad: true,
@@ -41,22 +37,25 @@ function App() {
 
 	const viewport = React.useRef<HTMLElement>(null)
 
-	const globalActions = {
-		"f": () => toggleFullscreen(),
-		"h": api.toggleHelp,
-		"s": api.nextFit,
-		"t": api.toggleThumbnails,
-		"x": api.nextAspect
+	const globalActions:ActionSet = {
+		"f": {type: 'toggleFullscreen'},
+		"h": {type: 'toggleHelp'},
+		"s": {type: 'nextFit'},
+		"t": {type: 'toggleThumbnails'},
+		"x": {type: 'nextAspect'}
 	}
 
-	const handleResize = () => {
-		const i = viewport.current!
-		api.setViewport({
-			width: i.clientWidth,
-			height: i.clientHeight
-		})
-	}
 	React.useLayoutEffect(() => {
+		const handleResize = () => {
+			const i = viewport.current!
+			const payload = {
+				viewport: {
+					width: i.clientWidth,
+					height: i.clientHeight
+				}
+			}
+			dispatch({ type: 'setPartialState', payload })
+		}
 		window.onresize = () => handleResize()
 		handleResize()
 		// eslint-disable-next-line
@@ -72,90 +71,92 @@ function App() {
 		window.onkeydown = (ev) => {
 			const key = ev.key.toLowerCase()
 			if (key in globalActions && !ev.shiftKey && !ev.ctrlKey) {
-				return globalActions[key as keyof typeof globalActions]()
+				return dispatch(globalActions[key])
 			}
 
-			const i = api.activeIndex
+			const i = state.activeIndex
 			if (i === undefined) return
-			const ctrlDisplayActions = {
-				"arrowleft": () => api.adjustActivePlaybackRate(0.5),
-				"arrowright": () => api.adjustActivePlaybackRate(2)
+			const ctrlDisplayActions:ActionSet = {
+				"arrowleft": {type: 'adjustActivePlaybackRate', payload: 0.5},
+				"arrowright": {type: 'adjustActivePlaybackRate', payload: 2}
 			}
-			const shiftDisplayActions = {
-				"s": () => api.syncPlaybackRates(api.displays[i].video!.playbackRate),
+			const shiftDisplayActions:ActionSet = {
+				"s": {type: 'syncPlaybackRates', payload: state.displays[i].video!.playbackRate}
 			}
-			const displayActions = {
-				"delete": api.removeActive,
-				"c": () => api.copyDisplay(i),
-				"d": () => api.distributeTimes(i),
-				"e": () => api.activeIndex && api.setExclusive(api.activeIndex),
-				"i": () => api.setActiveIO('in'),
-				"o": () => api.setActiveIO('out'),
-				"r": api.removeActive,
+			const displayActions:ActionSet = {
+				"delete": {type: 'removeActive'},
+				"c": {type: 'copyDisplay', payload: i},
+				"d": {type: 'distributeTimes', payload: i},
+				"e": {type: 'setExclusive', payload: i},
+				"i": {type: 'setActiveIO', payload: 'in'},
+				"o": {type: 'setActiveIO', payload: 'out'},
+				"r": {type: 'removeActive'},
 			}
 
 			if (ev.shiftKey) {
-				tryActions(shiftDisplayActions, key)
+				key in shiftDisplayActions && dispatch(shiftDisplayActions[key])
 			} else if (ev.ctrlKey) {
-				tryActions(ctrlDisplayActions, key)
+				key in ctrlDisplayActions && dispatch(ctrlDisplayActions[key])
 			} else {
-				tryActions(displayActions, key)
+				key in displayActions && dispatch(displayActions[key])
 				if (key >= "2" && key <= "9") {
-					api.addCopies(parseInt(key))
-					api.distributeTimes(i)
+					dispatch({type: 'addCopies', payload: parseInt(key)})
+					dispatch({type: 'distributeTimes', payload: i})
 				}
 			}
 		}
-	}, [api, globalActions])
+	}, [state.displays, state.activeIndex, globalActions])
 
 	React.useEffect(() => {
 		document.ondrop = e => {
 			stopEvent(e)
 			if (!e.dataTransfer) return
 			const droppedFiles = e.dataTransfer.files as FileList
-			api.addFiles(Array.from(droppedFiles))
+			dispatch({type: 'addFiles', payload: Array.from(droppedFiles)})
 		}
-	}, [api])
+	}, [])
 
 	const getRecommendedAspect = React.useCallback(() => {
-		const avgRatio = avg(api.displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
+		const avgRatio = avg(state.displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
 		const closestRatio = [...aspectRatios].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
 		return closestRatio
-	}, [api.displays])
+	}, [state.displays])
 
 	const size = React.useMemo(() => getVideoSize(
-		api.aspect.ratio,
-		api.displays.length,
-		api.viewport || {width: 1, height: 1}
-	), [api.aspect, api.displays, api.viewport])
+		state.aspect.ratio,
+		state.displays.length,
+		state.viewport || {width: 1, height: 1}
+	), [state.aspect, state.displays, state.viewport])
 
 	return <>
 		<main ref={viewport}
-			onDrop={e => api.reorderDisplays(e.target)}>
-			{api.displays.length === 0 && <Splash />}
-			{api.displays.map((d, i) => <BDVideo size={size} objectFit={api.fit} key={d.id} display={d}
-				showOverlay={api.activeIndex === i}
-				showThumbnail={api.showThumbnails}
-				onDrag={i => api.setPartialState({dragSrc: d})}
-				onMouseOver={() => api.setPartialState({activeIndex: i})}
-				onMouseOut={()=>api.setPartialState({activeIndex: undefined})}
-				onLoad={() => d.triggerResize && api.setPartialState({aspect: getRecommendedAspect()})}
-				onError={() => api.handleDisplayError()}
-				removeCallback={api.removeActive}
-				copyCallback={()=>api.copyDisplay(i)}
-				exclusiveCallback={() => api.setExclusive(i)}
-				staggerCallback={() => api.distributeTimes(i)}
-				inCallback={() => api.setActiveIO("in")}
-				outCallback={() => api.setActiveIO("out")}
-				speedCallback={adjustment => api.adjustActivePlaybackRate(adjustment)}
+			onDrop={e => dispatch({type: 'reorderDisplays', payload: e.target})}>
+			{state.displays.length === 0 && <Splash />}
+			{state.displays.map((d, i) => <BDVideo size={size} objectFit={state.fit} key={d.id} display={d}
+				showOverlay={state.activeIndex === i}
+				showThumbnail={state.showThumbnails}
+				onDrag={i => dispatch({type: 'setPartialState', payload: {dragSrc: d}})}
+				onMouseOver={() => dispatch({type: 'setPartialState', payload: {activeIndex: i}})}
+				onMouseOut={()=>dispatch({type: 'setPartialState', payload: {activeIndex: undefined}})}
+				// TODO: need to watch for load of all videos!  This method is broken
+				// onLoad={() => d.triggerResize && api.setPartialState({aspect: getRecommendedAspect()})}
+				onLoad={() => dispatch({type: 'setPartialState', payload: {aspect: getRecommendedAspect()}})}
+				onError={() => dispatch({type: 'handleDisplayError', payload: i})}
+				removeCallback={()=>dispatch({type: 'removeActive'})}
+				copyCallback={()=>dispatch({type: 'copyDisplay', payload: i})}
+				exclusiveCallback={() => dispatch({type: 'setExclusive', payload: i})}
+				staggerCallback={() => dispatch({type: 'distributeTimes', payload: i})}
+				inCallback={() => dispatch({type: 'setActiveIO', payload: 'in'})}
+				outCallback={() => dispatch({type: 'setActiveIO', payload: 'out'})}
+				speedCallback={i => dispatch({type: 'adjustActivePlaybackRate', payload: i})}
 			/>)}
 		</main>
-		{api.errorDisplays.length > 0 && <ErrorDisplay errorDisplays={api.errorDisplays} dismissCallback={api.dismissErrors} />}
-		{api.showHelp && <Help
-			aspectRatio={api.aspect}
-			objectFit={api.fit}
-			aspectRatioCallback={i=>api.setPartialState({aspect: i})}
-			objectFitCallback={i=>api.setPartialState({fit: i})} />}
+		{state.errorDisplays.length > 0 && <ErrorDisplay errorDisplays={state.errorDisplays} dismissCallback={()=>dispatch({type: 'dismissErrors'})} />}
+		{state.showHelp && <Help
+			aspectRatio={state.aspect}
+			objectFit={state.fit}
+			aspectRatioCallback={i=>dispatch({type: 'setPartialState', payload: {aspect: i}})}
+			objectFitCallback={i=>dispatch({type: 'setPartialState', payload: {fit: i}})} />}
 	</>
 }
 
