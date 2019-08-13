@@ -25,7 +25,7 @@ function stopEvent(e:Event) {
 type ActionSet = {[key:string]:AppAction}
 
 function App() {
-	const [state, dispatch] = React.useReducer(AppReducer, {
+	const [{displays, ...state}, dispatch] = React.useReducer(AppReducer, {
 		showHelp: true,
 		showThumbnails: true,
 		firstLoad: true,
@@ -81,7 +81,7 @@ function App() {
 				"arrowright": {type: 'adjustActivePlaybackRate', payload: 2}
 			}
 			const shiftDisplayActions:ActionSet = {
-				"s": {type: 'syncPlaybackRates', payload: state.displays[i].video!.playbackRate}
+				"s": {type: 'syncPlaybackRates', payload: displays[i].video!.playbackRate}
 			}
 			const displayActions:ActionSet = {
 				"delete": {type: 'removeActive'},
@@ -99,13 +99,13 @@ function App() {
 				key in ctrlDisplayActions && dispatch(ctrlDisplayActions[key])
 			} else {
 				key in displayActions && dispatch(displayActions[key])
-				if (key >= "2" && key <= "9") {
+				if (key >= "1" && key <= "9") {
 					dispatch({type: 'addCopies', payload: parseInt(key)})
 					dispatch({type: 'distributeTimes', payload: i})
 				}
 			}
 		}
-	}, [state.displays, state.activeIndex, globalActions])
+	}, [displays, state.activeIndex, globalActions])
 
 	React.useEffect(() => {
 		document.ondrop = e => {
@@ -116,39 +116,27 @@ function App() {
 		}
 	}, [])
 
-	const getRecommendedAspect = React.useCallback(() => {
-		const avgRatio = avg(state.displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
+	const getRecommendedAspect = () => {
+		const avgRatio = avg(displays.map(i => i.video!.videoWidth / i.video!.videoHeight))
 		const closestRatio = [...aspectRatios].sort((a, b) => Math.abs(avgRatio - b.ratio) - Math.abs(avgRatio - a.ratio)).pop()!
 		return closestRatio
-	}, [state.displays])
+	}
 
 	const size = React.useMemo(() => getVideoSize(
 		state.aspect.ratio,
-		state.displays.length,
+		displays.length,
 		state.viewport || {width: 1, height: 1}
-	), [state.aspect, state.displays, state.viewport])
+	), [state.aspect, displays, state.viewport])
 
 	return <>
-		<main ref={viewport}
-			onDrop={e => dispatch({type: 'reorderDisplays', payload: e.target})}>
-			{state.displays.length === 0 && <Splash />}
-			{state.displays.map((d, i) => <BDVideo size={size} objectFit={state.fit} key={d.id} display={d}
-				showOverlay={state.activeIndex === i}
+		<main ref={viewport} onDrop={e => dispatch({type: 'reorderDisplays', payload: e.target})}>
+			{displays.length === 0 && <Splash />}
+			{displays.map((d, i) => <BDVideo key={d.id} size={size} objectFit={state.fit} display={d}
 				showThumbnail={state.showThumbnails}
-				onDrag={i => dispatch({type: 'setPartialState', payload: {dragSrc: d}})}
-				onMouseOver={() => dispatch({type: 'setPartialState', payload: {activeIndex: i}})}
-				onMouseOut={()=>dispatch({type: 'setPartialState', payload: {activeIndex: undefined}})}
-				// TODO: need to watch for load of all videos!  This method is broken
-				// onLoad={() => d.triggerResize && api.setPartialState({aspect: getRecommendedAspect()})}
+				// TODO: should wait for load of all videos instead of calcualting after each one
 				onLoad={() => dispatch({type: 'setPartialState', payload: {aspect: getRecommendedAspect()}})}
-				onError={() => dispatch({type: 'handleDisplayError', payload: i})}
-				removeCallback={()=>dispatch({type: 'removeActive'})}
-				copyCallback={()=>dispatch({type: 'copyDisplay', payload: i})}
-				exclusiveCallback={() => dispatch({type: 'setExclusive', payload: i})}
-				staggerCallback={() => dispatch({type: 'distributeTimes', payload: i})}
-				inCallback={() => dispatch({type: 'setActiveIO', payload: 'in'})}
-				outCallback={() => dispatch({type: 'setActiveIO', payload: 'out'})}
-				speedCallback={i => dispatch({type: 'adjustActivePlaybackRate', payload: i})}
+				dispatch={dispatch}
+				index={i}
 			/>)}
 		</main>
 		{state.errorDisplays.length > 0 && <ErrorDisplay errorDisplays={state.errorDisplays} dismissCallback={()=>dispatch({type: 'dismissErrors'})} />}

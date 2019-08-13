@@ -10,9 +10,7 @@ type ThumbnailProps = {
 
 export const Thumbnail = ({src, offset, timestamp, width=thumbnailWidth}:ThumbnailProps) => {
 	const video = React.useRef<HTMLVideoElement>(null)
-	React.useEffect(() => {
-		video.current!.currentTime = timestamp
-	}, [timestamp])
+	if (video.current) video.current.currentTime = timestamp
 
 	return <video className="thumbnail"
 		ref={video}
